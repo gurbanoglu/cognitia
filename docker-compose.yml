@@ -28,6 +28,7 @@ services:
       - DB_NAME=db
       - DB_USER=user
       - DB_PASS=localdevpw
+      - CELERY_BROKER_URL=amqp://mquser:bunnypass123@mq:5672//
     depends_on:
       db:
         condition: service_healthy
