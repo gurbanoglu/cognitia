@@ -55,5 +55,22 @@ services:
       - RABBITMQ_DEFAULT_USER=mquser
       - RABBITMQ_DEFAULT_PASS=bunnypass123
 
+  worker:
+    build:
+      context: .
+    volumes:
+      - ./backend:/backend
+    command: >
+      sh -c "celery -A backend worker -l INFO"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=db
+      - DB_USER=user
+      - DB_PASS=localdevpw
+      - CELERY_BROKER_URL=amqp://mquser:bunnypass123@mq:5672//
+    depends_on:
+      - backend
+      - mq
+
 volumes:
   db-data:
