@@ -18,3 +18,7 @@
 # Add a Database to Django with Postgres and Docker
 
 How to add a Database to Django with Postgres and Docker.
+
+The.python-version file is there to guarantee that the
+correct Python version is used for running Django.
+This file cannot contain comments!
