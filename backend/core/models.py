@@ -1,6 +1,17 @@
 from django.db import models
+from openai import OpenAI
+from core.tasks import handle_ai_request_job
 
+'''
+The following class is a blueprint for a type
+called "Recipe".
 
+A blueprint defines the state and behaviour of
+an object.
+
+An object's state is the data is stores while its
+behaviour is the methods that can be invoked on it.
+'''
 class Recipe(models.Model):
 	"""Represents a recipe in the system."""
 	name = models.CharField(max_length=255)
@@ -53,3 +64,33 @@ class AiRequest(models.Model):
 
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
+
+	def _queue_job(self):
+		"""Add job to queue."""
+		handle_ai_request_job.delay(self.id)
+
+	def handle(self):
+		"""Handle request."""
+		self.status = self.RUNNING
+		self.save()
+		client = OpenAI()
+
+		try:
+			completion = client.chat.completions.create(
+				model="gpt-4o-mini",
+				messages=self.messages
+			)
+
+			self.response = completion.to_dict()
+			self.status = self.COMPLETE
+		except Exception:
+			self.status = self.FAILED
+
+		self.save()
+
+	def save(self, **kwargs):
+		is_new = self._state.adding
+		super().save(**kwargs)
+
+		if is_new:
+			self._queue_job()

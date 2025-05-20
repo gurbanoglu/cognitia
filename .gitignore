@@ -291,3 +291,8 @@ dist
 .yarn/build-state.yml
 .yarn/install-state.gz
 .pnp.*
+
+# Files that do not begin with a dot (.),
+# do not need to be prepended with a dot
+# in the .gitignore file:
+MyNotes.txt
