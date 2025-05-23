@@ -10,8 +10,7 @@ A blueprint defines the state and behaviour of
 an object.
 
 An object's state is the data is stores while its
-behaviour is the methods that can be invoked on it.
-'''
+behaviour is the methods that can be invoked on it.'''
 class Recipe(models.Model):
 	"""Represents a recipe in the system."""
 	name = models.CharField(max_length=255)
@@ -65,9 +64,12 @@ class AiRequest(models.Model):
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
 
+	# The leading underscore indicates that the
+	# subsequent method is private. Thus, it shouldn't
+	# be invoked outside of the class.
 	def _queue_job(self):
 		"""Add job to queue."""
-		handle_ai_request_job.delay(self.id)
+		handle_ai_request_job(self.id)
 
 	def handle(self):
 		"""Handle request."""
@@ -88,8 +90,11 @@ class AiRequest(models.Model):
 
 		self.save()
 
+	# Only run an AI request the first time
+	# the AI request is made.
 	def save(self, **kwargs):
 		is_new = self._state.adding
+
 		super().save(**kwargs)
 
 		if is_new:
