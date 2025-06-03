@@ -1,4 +1,3 @@
-
 <div align="center">
     <a href="https://londonappdeveloper.com" target="_blank">
         <img src="https://londonappdeveloper.com/wp-content/uploads/2024/11/banner.svg" alt="Banner image" />
@@ -22,3 +21,9 @@ How to add a Database to Django with Postgres and Docker.
 The.python-version file is there to guarantee that the
 correct Python version is used for running Django.
 This file cannot contain comments!
+
+
+Execute the following command in a terminal
+window to launch the application:
+
+docker compose up --watch --build
