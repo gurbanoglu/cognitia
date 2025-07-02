@@ -1,3 +1,5 @@
+@import "tailwindcss";
+
 * {
   box-sizing: border-box;
 }
@@ -6,45 +8,47 @@
   width: 100%;
   height: 100%;
   display: flex;
-  justify-content: center;
+  justify-content: flex-start;
+  padding-left: 1.25rem;
+
+  /* Vertical positioning. */
   align-items: center;
+}
 
-  .chat-wrapper {
-    width: 80%;
-    height: 80%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
-    border-radius: 12px;
-    padding: 10px;
+.wrapper .chat-wrapper {
+  width: 100%;
+  height: 80%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 10px;
+}
 
-    .chat-history {
-      height: 100%;
-      margin: 10px;
-      overflow: auto;
-      display: flex;
-      flex-direction: column;
-      flex-direction: column-reverse;
-      overflow-anchor: auto;
+.wrapper .chat-wrapper .chat-history {
+  height: 100%;
+  margin: 10px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column-reverse;
+  overflow-anchor: auto;
+}
 
-      .message {
-        background-color: #f0f0f0;
-        padding: 10px;
-        margin: 10px;
-        border-radius: 10px;
-      }
+.wrapper .chat-wrapper .chat-history .message {
+  background-color: #f0f0f0;
+  padding: 10px;
+  margin: 10px;
+  border-radius: 10px;
+}
 
-      .message.user {
-        background-color: #b4d8ff;
-      }
-    }
+.wrapper .chat-wrapper .chat-history .message.user {
+  background-color: #b4d8ff;
+}
 
-    input {
-      width: 100%;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-    }
-  }
+.wrapper .chat-wrapper input {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }

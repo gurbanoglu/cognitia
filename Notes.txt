@@ -1,0 +1,251 @@
+https://londonappdeveloper.com/create-ai-chatbot-with-openai-django-and-react/
+
+https://www.youtube.com/watch?v=mYRXd1UFrM4
+
+git clone https://github.com/LondonAppDeveloper/yt-django-celery.git chatbot
+
+git clone: This is a Git command used to create a copy of
+           a remote repository onto your local machine.
+
+https://github.com/LondonAppDeveloper/yt-django-celery.git:
+This is the URL of the remote Git repository that you want to
+clone. It points to a project hosted on GitHub, specifically
+a project by LondonAppDeveloper named yt-django-celery.
+
+chatbot: This is the name of the directory that Git will
+create on your local machine to store the cloned repository.
+Instead of using the default name yt-django-celery, it will
+rename the folder to chatbot.
+
+The following command builds or re-builds the Docker
+images specified in the docker-compose.yml file using
+the instructions defined in each service’s Dockerfile.
+docker compose build
+
+Backend:
+Django
+
+Front-end:
+React
+
+Initialise the Git repository:
+git init
+
+Remember to initialise the Git repository in
+the same directory where the .gitignore file
+is located.
+
+.gitignore is a file where the developer can
+specify what files in the project should not
+be pushed to the Git repository.
+
+Why use Docker?
+The code, runtime, dependencies, config files, and
+even OS-level libraries are all packaged together.
+
+This creates a self-contained environment.
+
+That container can be run anywhere Docker is installed
+— your laptop, a teammate’s machine, a CI pipeline, or
+a production server — with the same behavior every time.
+
+git commit -am "add logic for chat session"
+
+The above command can also be written as the following:
+git commit -a -m "add logic for chat session"
+
+The -am flag is a combination of two separate flags:
+-a and -m
+
+The -a flag automatically stages (adds) all modified
+files that are already tracked (i.e., files that Git
+already knows about from previous commits).
+
+The -m flag requires a message string to follow it.
+In this case the message string is "add logic for chat
+session".
+
+Cost:
+15 cents for roughly four million characters inputted
+into his Chatbot.
+
+
+docker compose run --rm backend python manage.py createsuperuser
+
+Creates a Django superuser within a Dockerised Django project.
+
+Breakdown:
+docker compose run: Runs a one-time command against a service
+                    defined in your docker-compose.yml file.
+
+--rm: Automatically removes the container once the command completes.
+
+backend: Refers to the service name in your docker-compose.yml file.
+         This should be the service where Django is installed (often
+         called web or backend).
+
+python manage.py createsuperuser: Runs the Django management command
+                                  to create a superuser.
+
+Migrating to TypeScript:
+
+Navigate to the frontend directory first.
+
+Install TypeScript, @types/react, and @types/react-dom:
+npm install --save-dev typescript @types/react @types/react-dom
+
+Initialise TypeScript configuration:
+npx tsc --init
+
+Update your tsconfig.json for React:
+{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": true,
+    "module": "NodeNext"
+  },
+  "include": ["src"]
+}
+
+Migrating .eslintrc.cjs to eslint.config.mjs:
+Create a new file named eslint.config.mjs in
+the React project root.
+
+Understand that the content of the eslint.config.mjs
+file will be influenced by the content in the existing
+.eslintrc.cjs file.
+
+Eventually remove the subsequent line:
+I used Perplexity AI to determine what the content of
+the new eslint.config.mjs file should be.
+
+If the following doesn't generate any errors,
+then it can be confirmed that the new ESLint
+runs correctly:
+npx eslint --config eslint.config.mjs
+
+Delete the .eslintrc.cjs file.
+
+Navigate to the frontend directory because Tailwind CSS
+is frontend CSS framework.
+
+Install Tailwind CSS and the Vite plugin:
+npm install -D tailwindcss @tailwindcss/vite
+
+Configure Vite to use the Tailwind plugin by editing
+vite.config.ts:
+import tailwindcss from '@tailwindcss/vite';
+
+plugins: [react(), tailwindcss()],
+
+
+With Tailwind CSS version 4, creating configuration
+files is not necessary. Thus, the below command
+doesn't need to be executed.
+npx tailwindcss init -p
+
+Add the following directive at the top of the App.css
+file because it informs Tailwind CSS where it needs to
+inject its core styles into the stylesheet:
+@import "tailwindcss";
+
+Install React Router:
+npm install react-router-dom
+
+A React project generally has both index.css and
+App.css.
+
+index.css holds global CSS styles that apply to the
+entire app or the root HTML elements.
+
+App.css contains CSS styles scoped to the App component
+only.
+
+Insert the text 'Cognitia' between the <title></title>
+tags in the index.html file to change the name shown
+on the browser tab.
+
+In a React project, the index.html file serves as the
+static HTML template and the initial entry point loaded
+by the browser. Its role is to provide the basic HTML
+structure and a mounting point for the React application.
+
+Install axios for it possesses built-in features for
+handling complex HTTP interactions, especially
+automatic JSON data transformation, centralized error
+handling, and support for request/response interceptors:
+npm i axios
+
+To support authentication in Django with various
+social accounts:
+pip install django-allauth
+
+Middleware for handling cross-origin resource sharing:
+pip install django-cors-headers
+
+CORS is a security feature that restricts how resources
+on a web page can be requested from another domain.
+
+Python library for sending HTTP requests:
+pip install requests
+
+HTTP requests are necessary for sending and receiving
+data from web servers.
+
+Cryptography is a library for performing encryption
+and decryption in Python:
+pip install cryptography
+
+JSON Web Token (JWT) authentication plugin designed
+for the Django REST Framework:
+pip install djangorestframework-simplejwt
+
+Navigate to the chatbot directory.
+
+Activate the virtual environment:
+source ./venv/bin/activate
+
+Install python-dotenv:
+pip install python-dotenv
+
+Navigate to the chatbot/backend directory.
+
+Generate the requirements.txt file:
+pip freeze > requirements.txt
+
+This way in the future was installing all of
+the packages for the Django application, you
+will only need to execute the ensuing command:
+pip install -r requirements.txt
+
+Making migrations for Django inside a Docker container:
+1. Excute the subsequent command in the directory containing
+   the docker-compose.yml file:
+   docker compose up -d --build
+
+2. Find the name of the container storing the Django project.
+   docker ps
+
+3. Execute the following commands:
+   docker exec -it <container_name> python manage.py makemigrations
+   docker exec -it <container_name> python manage.py migrate
+
+Launch the backend Docker container for the sake
+of launching the Django shell:
+docker-compose up -d backend
+
+Launch the Django shell:
+docker-compose exec backend python manage.py shell
+
+Next steps:
+If I sign in on a different device, then I should
+have to click on the link sent to my email.
+
+However, I shouldn't have to do this everytime on
+the same device.
+
+Authentication to the page, so
+that not anyone can access it
+and make an abundant amount of
+requests on your API key.

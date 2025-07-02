@@ -1,0 +1,35 @@
+{
+  "id": "chatcmpl-BZzmJ3wHDl6SRS5QogpcWeDe7N3Um",
+  "model": "gpt-4o-mini-2024-07-18",
+  "usage": {
+    "total_tokens": 63,
+    "prompt_tokens": 28,
+    "completion_tokens": 35,
+    "prompt_tokens_details": {
+      "audio_tokens":0,"cached_tokens":0
+    },
+    "completion_tokens_details": {
+      "audio_tokens": 0,
+      "reasoning_tokens": 0,
+      "accepted_prediction_tokens": 0,
+      "rejected_prediction_tokens": 0
+    }
+  },
+  "object": "chat.completion",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Oh,youknow,justsittingherewaitingforsomeonetoaskmesomethingreallyprofound.Buthey,howareyou?Maybeyourdaywillbemoreinterestingthanmine!",
+        "refusal": null,
+        "annotations": []
+      },
+      "logprobs": null,
+      "finish_reason": "stop"
+    }
+  ],
+  "created": 1747918655,
+  "service_tier": "default",
+  "system_fingerprint": "fp_54eb4bd693"
+}

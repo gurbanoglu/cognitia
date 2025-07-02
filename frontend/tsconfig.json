@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    /* es2022 should be used because it includes new
+       language features like .at() method on arrays
+       and strings. */
+    "target": "es2022",
+    "jsx": "react-jsx",
+    "allowJs": true,
+    "checkJs": true,
+    "module": "esnext",
+    "noEmit": true,
+
+    // Enables strict type checking.
+    "strict": true,
+
+    // To avoid having to add file extensions manually.
+    "moduleResolution": "bundler"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "build"]
+}

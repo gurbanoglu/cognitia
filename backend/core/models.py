@@ -1,6 +1,76 @@
 from django.db import models
 from openai import OpenAI
 from core.tasks import handle_ai_request_job
+from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin, BaseUserManager
+from django.conf import settings
+from django.db import models
+from django.utils import timezone
+import base64
+import os
+from django.utils.text import slugify
+import uuid
+
+
+class CustomUserManager(BaseUserManager):
+	def create_user(self, email_address):
+		if not email_address:
+			raise ValueError('An email address must be set')
+
+		email_address = self.normalize_email(email_address)
+
+		user = self.model(email_address=email_address)
+
+		user.save(using=self._db)
+
+		return user
+
+	def create_superuser(self, email_address, password=None):
+		user = self.create_user(email_address)
+		user.is_superuser = True
+		user.is_staff = True
+		user.save(using=self._db)
+		return user
+
+
+class CustomUser(AbstractBaseUser, PermissionsMixin):
+	email_address = models.EmailField(unique=True)
+	is_active = models.BooleanField(default=True)
+	is_staff = models.BooleanField(default=False)
+
+	# In Django, USERNAME_FIELD tells the authentication
+	# system which field should be used to uniquely
+	# identify a user.
+	USERNAME_FIELD = 'email_address'
+
+	objects = CustomUserManager()
+
+	def __str__(self):
+		return self.email_address
+
+
+class ActivationToken(models.Model):
+	# OneToOneField links token to a single user.
+	user = models.OneToOneField(
+		settings.AUTH_USER_MODEL, on_delete=models.CASCADE
+	)
+
+	# The unique activation token.
+	activation_token = models.CharField(max_length=64, unique=True)
+
+	created_at = models.DateTimeField(auto_now_add=True)
+
+	# expires_at defines token expiration time.
+	expires_at = models.DateTimeField()
+
+	# used flags whether token has been consumed.
+	used = models.BooleanField(default=False)
+
+	def is_expired(self):
+		return timezone.now() > self.expires_at
+
+	def mark_used(self):
+		self.used = True
+		self.save()
 
 '''
 The following class is a blueprint for a type
@@ -19,11 +89,50 @@ class Recipe(models.Model):
 	def __str__(self):
 		return self.name
 
+def generate_session_id():
+  # 16 random bytes = 128 bits of entropy
+  random_bytes = os.urandom(16)
+
+  # URL-safe Base64 encode (no +, /, or =)
+  session_id = base64.urlsafe_b64encode(random_bytes).decode('utf-8')
+
+  # Optionally strip trailing "=" padding
+  return session_id.rstrip('=')
+
 
 class AiChatSession(models.Model):
 	"""Tracks an AI chat session."""
-	created_at = models.DateTimeField(auto_now_add=True)
-	updated_at = models.DateTimeField(auto_now=True)
+
+	user = models.ForeignKey(
+		CustomUser,
+		# Deletes sessions when user is deleted
+		on_delete=models.CASCADE,
+		# Allows user.chat_sessions.all()
+		related_name='chat_sessions',
+		null=True
+  )
+
+	# Initially when a chat session is created,
+	# a session ID is not yet needed.
+	session_id = models.CharField(max_length=36, null=True, blank=True)
+
+	title = models.CharField(max_length=200, blank=True)
+
+	slug = models.SlugField(
+		max_length=260,
+		unique=True,
+		blank=True,
+		null=True
+	)
+
+	def save(self, *args, **kwargs):
+		if not self.slug and self.title:
+			base = slugify(self.title)
+			slug_suffix = self.session_id or str(uuid.uuid4())[:8]
+
+			self.slug = f"{base}-{slug_suffix}"
+
+		super().save(*args, **kwargs)
 
 	def get_last_request(self):
 		"""Return the most recent AiRequest or None."""
@@ -59,6 +168,12 @@ class AiChatSession(models.Model):
 
 	def send(self, message):
 		"""Send a message to the AI."""
+
+		if not self.title:
+			self.title = message[:50]
+
+			self.save()
+
 		last_request = self.get_last_request()
 
 		if not last_request:
@@ -73,6 +188,10 @@ class AiChatSession(models.Model):
 			)
 		else:
 			return
+
+	# Determines how the object will be outputted.
+	def __str__(self):
+		return self.title
 
 
 class AiRequest(models.Model):
@@ -90,7 +209,10 @@ class AiRequest(models.Model):
 		(FAILED, 'Failed')
 	)
 
-	status = models.CharField(choices=STATUS_OPTIONS, default=PENDING)
+	status = models.CharField(
+		choices=STATUS_OPTIONS,
+		default=PENDING
+	)
 
 	# "session" is the ID of the session
 	# that the AI request is part of.

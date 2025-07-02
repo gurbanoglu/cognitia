@@ -17,12 +17,33 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
-from backend.views import hello_world
-from core.views import create_chat_session, chat_session
+from backend.views import (
+	send_verification_code,
+  verify_token,
+  check_if_active,
+  login_with_email
+)
+
+from core.views import (
+  create_chat_session,
+  chat_session,
+  chat_session_detail,
+  save_chat_session,
+  get_all_sessions
+)
+
+from .views import get_csrf_token
 
 urlpatterns = [
-    path('api/hello-world/', hello_world),
-    path('api/chat/sessions/', create_chat_session),
-    path('api/chat/sessions/<str:session_id>/', chat_session),
-    path('admin/', admin.site.urls),
+  path('admin/', admin.site.urls),
+	path('api/chat/sessions/', create_chat_session),
+	path('api/chat/sessions/<str:session_id>/', chat_session),
+	path('send-verification-code/', send_verification_code),
+	path('verify-token/', verify_token),
+  path('check-if-active/', check_if_active),
+  path('login-with-email/', login_with_email),
+  path('api/get-csrf-token/', get_csrf_token),
+  path('chat/<slug:slug>/', chat_session_detail),
+  path('save-chat-session/', save_chat_session),
+  path('get-all-sessions/', get_all_sessions)
 ]

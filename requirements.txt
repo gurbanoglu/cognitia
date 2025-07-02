@@ -4,3 +4,9 @@ django-cors-headers==4.6.0
 psycopg[c]==3.2.3
 celery==5.4.0
 openai==1.61.1
+python-dotenv==1.0.1
+django-allauth>=0.32.0
+djangorestframework-simplejwt
+requests
+cryptography
+google-auth
