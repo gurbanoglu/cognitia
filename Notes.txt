@@ -238,6 +238,25 @@ docker-compose up -d backend
 Launch the Django shell:
 docker-compose exec backend python manage.py shell
 
+AWS Amplify offers a Git-based CI/CD workflow for
+building, deploying, and hosting single-page web
+applications or static sites with backends. When
+connected to a Git repository, Amplify determines
+the build settings for both the frontend framework
+and any configured backend resources, and automatically
+deploys updates with every code commit.
+
+In this task, you will start by creating a new React
+application and pushing it to a GitHub repository.
+You will then connect the repository to AWS Amplify
+web hosting and deploy it to a globally available
+content delivery network (CDN) hosted on an
+amplifyapp.com domain.
+
+Create an Amplify project by running the following
+command in the React project's directory:
+npm create amplify@latest -y
+
 Next steps:
 If I sign in on a different device, then I should
 have to click on the link sent to my email.
