@@ -103,10 +103,12 @@ def get_all_sessions(request):
     "sessions": serializer.data
   })
 
-@api_view(['GET', 'POST', 'DELETE'])
+@api_view(['GET', 'POST', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def chat_session(request, session_id):
   print('session_id:', session_id)
+
+  # AiChatSession.objects.all().delete()
 
   try:
     session = AiChatSession.objects.get(
@@ -118,15 +120,30 @@ def chat_session(request, session_id):
   if request.method == 'GET':
     serializer = AiChatSessionSerializer(session)
     return Response(serializer.data)
-
   elif request.method == 'POST':
     message = request.data.get('message')
     if not message:
-      return Response({'error': 'Message is required'}, status=status.HTTP_400_BAD_REQUEST)
+      return Response(
+        {'error': 'Message is required'},
+        status=status.HTTP_400_BAD_REQUEST
+      )
     session.send(message)
     serializer = AiChatSessionSerializer(session)
     return Response(serializer.data)
+  elif request.method == 'PUT':
+    title = request.data.get('title')
 
+    if not title:
+      return Response(
+        {'error': 'Title is required'},
+        status=status.HTTP_400_BAD_REQUEST
+      )
+
+    session.title = title
+    session.slug = generate_unique_slug(slugify(title))
+    session.save()
+    serializer = AiChatSessionSerializer(session)
+    return Response(serializer.data)
   elif request.method == 'DELETE':
     session.delete()
 

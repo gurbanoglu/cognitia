@@ -1,6 +1,8 @@
 services:
   db:
     image: postgres:17.1
+    env_file:
+      - .env
     volumes:
       - db-data:/var/lib/postgresql/data
     ports:
@@ -47,10 +49,10 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DB_HOST=db
-      - DB_NAME=db
-      - DB_USER=user
-      - DB_PASS=localdevpw
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
       - CELERY_BROKER_URL=amqp://mquser:${RABBITMQ_PASSWORD}@rabbitmq:5672//
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}

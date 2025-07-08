@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import apiClient from "../api/apiClient";
 import { getCookie } from "../api/getCookie";
 import { RootState } from './../app/store';
@@ -6,7 +6,7 @@ import { useSelector } from "react-redux";
 import NewChatButton from "../components/NewChatButton";
 import { useParams, useNavigate } from "react-router-dom";
 import { deleteChatSession } from "../api/deleteChatSession";
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash2, Check } from "lucide-react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 
 interface Message {
@@ -48,21 +48,70 @@ const Chat: React.FC = () => {
 
   const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null);
   const [menuOpenSessionId, setMenuOpenSessionId] = useState<string | null>(null);
+  const [renameWasClicked, setRenameWasClicked] = useState<boolean>(false);
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
 
-  const toggleMenu = (sessionId: string) => {
-    setMenuOpenSessionId(prev => (prev === sessionId ? null : sessionId));
+   const mounted = useRef(false);
+
+  const handleClick = (event: MouseEvent) => {
+    if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+      setMenuOpenSessionId(null); // Close the menu
+    }
+  };
+
+  // Tracks changes to menuOpenSessionId.
+  useEffect(() => {
+    if (!mounted.current) {
+      mounted.current = true;
+      return;
+    }
+
+    if (menuOpenSessionId) {
+      // Wait for UI update, then add the event listener
+      setTimeout(() => {
+        document.addEventListener("click", handleClick);
+      }, 0);  // We add a small delay to allow UI to render
+    } else {
+      document.removeEventListener("click", handleClick);
+    }
+
+    // Cleanup event listener when the component unmounts or when menu is closed
+    return () => {
+      document.removeEventListener("click", handleClick);
+    };
+  }, [menuOpenSessionId]);
+
+  // const toggleMenu = (sessionId: string) => {
+  //   if (menuOpenSessionId === sessionId) {
+  //     setMenuOpenSessionId(null);  // Close the menu
+  //   } else {
+  //     setMenuOpenSessionId(sessionId);  // Open the menu
+  //   }
+  // };
+
+  const toggleMenu = (sessionId: string, fromRename = false) => {
+    if (fromRename) {
+      setMenuOpenSessionId(null); // Close the menu if "Rename" is clicked
+    } else {
+      if (menuOpenSessionId === sessionId) {
+        setMenuOpenSessionId(null);  // Close the menu
+      } else {
+        setMenuOpenSessionId(sessionId);  // Open the menu
+      }
+    }
   };
 
   const { slug } = useParams();
   const navigate = useNavigate();
 
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
   const fetchSessions = async () => {
     const csrfToken = getCookie('csrftoken');
 
     if (!isAuthenticated || !csrfToken) return;
-    console.log('fetchSessions 50');
+
     try {
       const response = await apiClient.get(
         "/api/chat/sessions/",
@@ -142,7 +191,7 @@ const Chat: React.FC = () => {
           delete copy[sessionId];
           return copy;
         });
-        navigate('/chat'); // go to new chat empty route
+        navigate('/chat');
       }
     } catch (error) {
       console.error("Failed to delete session:", error);
@@ -153,8 +202,6 @@ const Chat: React.FC = () => {
     const fetchData = async () => {
       try {
         const allSessions = await fetchAllSessions();
-
-        // console.log('allSessions.sessions:', allSessions.sessions);
 
         setSessions(allSessions.sessions);
       } catch (error) {
@@ -257,7 +304,7 @@ const Chat: React.FC = () => {
         setSelectedSessionId(activeSessionId);
         setIsNewUnsavedChat(false);
 
-        // Add to chat session to sidebar immediately.
+        // Add chat session to sidebar immediately.
         setSessions(prev => {
           console.log('prev:', prev);
 
@@ -332,7 +379,7 @@ const Chat: React.FC = () => {
 
         <div className="chat-sidebar"
           style={{
-            width: '13rem',
+            width: '20rem',
             borderRight: '1px solid #ccc',
             padding: '1rem',
             height: '100vh',
@@ -362,131 +409,205 @@ const Chat: React.FC = () => {
 
           {/* Left side panel */}
           {sessions.length > 0 && sessions.map((session) => (
-          <div
-            key={session.session_id}
-            className="session-button-wrapper"
-            style={{ position: 'relative', marginBottom: '0.5rem' }}
-            onMouseEnter={() => setHoveredSessionId(session.session_id)}
-            onMouseLeave={() => setHoveredSessionId(null)}
-          >
-            <button
-              onClick={() => {
-                if (session.slug && editingSessionId !== session.session_id) {
-                  loadSessionById(session.session_id, session.slug);
+            <div
+              key={session.session_id}
+              className="session-button-wrapper"
+              style={{
+                position: 'relative',
+                marginBottom: '0.5rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between'
+              }}
+              onMouseEnter={() => setHoveredSessionId(session.session_id)} // Set hovered session
+              onMouseLeave={() => {
+                if (!menuOpenSessionId) {
+                  // Remove hovered session if menu is not open
+                  setHoveredSessionId(null);
                 }
               }}
-              onDoubleClick={() => {
-                setEditingSessionId(session.session_id);
-                setEditingTitle(session.title || "");
-              }}
-              className={`session-button ${session.session_id === selectedSessionId ? "active" : ""}`}
-              style={{
-                display: 'block',
-                width: '100%',
-                textAlign: 'left',
-                paddingRight: '2rem',
-                position: 'relative',
-                minHeight: '2.5rem'
-              }}
             >
-              {editingSessionId === session.session_id ? (
-                <input
-                  type="text"
-                  value={editingTitle}
-                  autoFocus
-                  onChange={(e) => setEditingTitle(e.target.value)}
-                  onBlur={() => {
-                    updateSessionTitle(session.session_id, editingTitle.trim() || "Untitled Chat");
-                    setEditingSessionId(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      updateSessionTitle(session.session_id, editingTitle.trim() || "Untitled Chat");
-                      setEditingSessionId(null);
-                    } else if (e.key === 'Escape') {
-                      setEditingSessionId(null);
-                    }
-                  }}
-                  style={{
-                    width: '90%',
-                    font: 'inherit',
-                    padding: '0.25rem',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    backgroundColor: 'white'
-                  }}
-                />
-              ) : (
-                session.title?.trim() || "Untitled Chat"
-              )}
-            </button>
-
-            {/* 3-dot menu button */}
-            {hoveredSessionId === session.session_id && (
-              <div style={{ position: 'absolute', top: '0.25rem', right: '0.25rem' }}>
-                <button
-                  onClick={() => toggleMenu(session.session_id)}
-                  style={{
-                    background: 'transparent',
-                    border: 'none',
-                    fontSize: '1rem',
-                    cursor: 'pointer'
-                  }}
-                >
-                  ⋯
-                </button>
-
-                {menuOpenSessionId === session.session_id && (
-                  <div style={{
-                    position: 'absolute',
-                    right: '0',
-                    top: '1.5rem',
-                    backgroundColor: '#fff',
-                    border: '1px solid #ccc',
-                    borderRadius: '4px',
-                    zIndex: 9999,
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.2)'
-                  }}>
-                    <div
-                      onClick={() => {
-                        setEditingSessionId(session.session_id);
-                        setEditingTitle(session.title || "");
-                        setMenuOpenSessionId(null);
+              <div
+                onClick={() => {
+                  if (session.slug && editingSessionId !== session.session_id) {
+                    loadSessionById(session.session_id, session.slug);
+                  }
+                }}
+                onDoubleClick={() => {
+                  setEditingSessionId(session.session_id);
+                  setEditingTitle(session.title || "");
+                }}
+                className={`session-button ${session.session_id === selectedSessionId ? "active" : ""}`}
+                style={{
+                  flexGrow: 1,
+                  textAlign: 'left',
+                  paddingRight: '0.5rem',
+                  minHeight: '2.5rem',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+              >
+                {editingSessionId === session.session_id ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      autoFocus
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          updateSessionTitle(session.session_id, editingTitle.trim() || "Untitled Chat");
+                          setEditingSessionId(null);
+                        } else if (e.key === 'Escape') {
+                          setEditingSessionId(null);
+                        }
                       }}
                       style={{
-                        padding: '0.5rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem'
+                        flexGrow: 1,
+                        font: 'inherit',
+                        padding: '0.25rem',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px',
+                        backgroundColor: 'white'
                       }}
-                    >
-                      <Pencil size={16} />
-                      Rename
-                    </div>
-
-                    <div
-                      onClick={() => {
-                        setSessionToDelete(session.session_id);
-                        setMenuOpenSessionId(null);
-                      }}
-                      style={{
-                        padding: '0.5rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        color: 'red'
-                      }}
-                    >
-                      <Trash2 size={16} />
-                      Delete
-                    </div>
+                    />
                   </div>
+                ) : (
+                  session.title?.trim() || "Untitled Chat"
                 )}
               </div>
-            )}
-          </div>
+
+              {/* Show ⋯ button when the session is hovered */}
+              {hoveredSessionId === session.session_id && (
+                <div style={{ position: "relative" }}>
+                  {renameWasClicked ?
+                    <div style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '1rem' }}>
+                      <button
+                        onClick={() => {
+                          updateSessionTitle(
+                            session.session_id,
+                            editingTitle.trim() || "Untitled Chat"
+                          );
+
+                          setEditingSessionId(null);
+
+                          setRenameWasClicked(false);
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        aria-label="Confirm rename"
+                      >
+                        <Check size={18} color="green" />
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setEditingSessionId(null);  // Cancel edit mode
+                          setRenameWasClicked(false); // Optional: reset state
+                        }}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          cursor: 'pointer',
+                          padding: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '18px',   // Adjust size of the "X"
+                          color: 'red',       // Color of the "X"
+                          fontWeight: 'bold', // Make the "X" bold
+                        }}
+                        aria-label="Cancel rename"
+                      >
+                        X
+                      </button>
+                    </div>
+                    :
+                    <button
+                      // Open the menu on click
+                      onClick={() => toggleMenu(session.session_id)}
+                      style={{
+                        background: "transparent",
+                        border: "none",
+                        fontSize: "1rem",
+                        cursor: "pointer",
+                        padding: "0.25rem",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                      aria-label="Open session menu"
+                    >
+                      ⋯
+                    </button>
+                  }
+
+                  {/* Menu (Rename, Delete) */}
+                  {menuOpenSessionId === session.session_id && (
+                    <div
+                      ref={menuRef}
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "1.5rem",
+                        backgroundColor: "#fff",
+                        border: "1px solid #ccc",
+                        borderRadius: "4px",
+                        zIndex: 9999,
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                      }}
+                    >
+                      <div
+                        onClick={() => {
+                          setEditingSessionId(session.session_id);
+                          setEditingTitle(session.title || "");
+                          toggleMenu(session.session_id, true);
+                          setRenameWasClicked(true);
+                        }}
+                        style={{
+                          padding: "0.5rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                        }}
+                      >
+                        <Pencil size={16} />
+                        Rename
+                      </div>
+
+                      <div
+                        onClick={() => {
+                          setSessionToDelete(session.session_id);
+                          toggleMenu(session.session_id, true);
+                        }}
+                        style={{
+                          padding: "0.5rem",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.5rem",
+                          color: "red",
+                        }}
+                      >
+                        <Trash2 size={16} />
+                        Delete
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           ))}
         </div>
 
@@ -544,8 +665,13 @@ const Chat: React.FC = () => {
         <ConfirmDeleteModal
           onCancel={() => setSessionToDelete(null)}
           onConfirm={() => {
-            deleteChatSession(sessionToDelete);
-            setSessionToDelete(null);
+            if (sessionToDelete) {
+              // Update the state to see the changes
+              // immediately in the UI.
+              deleteSession(sessionToDelete);
+
+              setSessionToDelete(null);
+            }
           }}
         />
       )}

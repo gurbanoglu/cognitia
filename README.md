@@ -23,7 +23,7 @@ correct Python version is used for running Django.
 This file cannot contain comments!
 
 
-From the chatbot directory, execute the following command
+From the cognitia directory, execute the following command
 in a terminal window to launch the application:
 
 docker compose up --watch --build

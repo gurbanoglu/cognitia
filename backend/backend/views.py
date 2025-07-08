@@ -238,7 +238,7 @@ class GoogleAuthView(APIView):
 
 		# get_or_create() ensures the user is saved
 		# if they do not already exist.
-		user, create = User.objects.get_or_create(
+		user, created = User.objects.get_or_create(
 			email_address=email_address,
 			defaults={'email_address': email_address}
 		)

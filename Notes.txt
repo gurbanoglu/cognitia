@@ -257,6 +257,10 @@ Create an Amplify project by running the following
 command in the React project's directory:
 npm create amplify@latest -y
 
+Once the project has been deployed on AWS Amplify,
+load the subsequent URL in a web browser:
+https://main.d1vpw25gp1hyei.amplifyapp.com/sign-up/
+
 Next steps:
 If I sign in on a different device, then I should
 have to click on the link sent to my email.
