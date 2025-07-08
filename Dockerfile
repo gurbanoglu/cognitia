@@ -2,6 +2,21 @@ FROM python:3.13.0-alpine3.20
 
 ENV PYTHONUNBUFFERED 1
 
+# Install Python dependencies first
+RUN pip install --upgrade pip
+
+# Install PostgreSQL client
+RUN apk add --update --upgrade --no-cache postgresql-client
+
+# Install build tools
+RUN apk add --update --upgrade --no-cache --virtual .tmp build-base postgresql-dev libffi-dev musl-dev
+
+# Install Python requirements
+RUN pip install --no-cache-dir -r /requirements.txt
+
+# Clean up build dependencies
+RUN apk del .tmp
+
 # Use the latest Node.js version
 RUN npm install -g npm@latest
 
