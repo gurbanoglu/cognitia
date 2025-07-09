@@ -1,5 +1,7 @@
 FROM python:3.11-alpine
 
+RUN apk update && apk add --no-cache curl
+
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
