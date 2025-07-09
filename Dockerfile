@@ -5,19 +5,20 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-COPY requirements.txt /requirements.txt
+COPY requirements.txt .
 
-# Update pip
-RUN pip install --upgrade pip
+# Install system dependencies required for psycopg2 and other packages
+RUN apk update && apk add --no-cache \
+    gcc \
+    musl-dev \
+    libffi-dev \
+    postgresql-dev \
+    python3-dev \
+    cargo \
+    build-base
 
-# Install system dependencies
-RUN apk add --no-cache postgresql-client \
-    && apk add --no-cache --virtual .tmp build-base postgresql-dev
+# Install Python dependencies
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Install Python packages
-RUN pip install --no-cache-dir -r /requirements.txt
-
-# Clean up
-RUN apk del .tmp
-
-COPY . /app/
+COPY . .
