@@ -1,40 +1,23 @@
-FROM python:3.13.0-alpine3.20
+FROM python:3.11-alpine
 
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
-# Install Python dependencies first
+WORKDIR /app
+
+COPY requirements.txt /requirements.txt
+
+# Update pip
 RUN pip install --upgrade pip
 
-# Install PostgreSQL client
-RUN apk add --update --upgrade --no-cache postgresql-client
+# Install system dependencies
+RUN apk add --no-cache postgresql-client \
+    && apk add --no-cache --virtual .tmp build-base postgresql-dev
 
-# Install build tools
-RUN apk add --update --upgrade --no-cache --virtual .tmp build-base postgresql-dev libffi-dev musl-dev
-
-# Install Python requirements
+# Install Python packages
 RUN pip install --no-cache-dir -r /requirements.txt
 
-# Clean up build dependencies
+# Clean up
 RUN apk del .tmp
 
-# Use the latest Node.js version
-RUN npm install -g npm@latest
-
-# Clear npm cache before installing dependencies
-RUN npm cache clean --force
-
-# Install dependencies using npm ci
-RUN npm ci
-
-COPY ./requirements.txt /requirements.txt
-
-RUN pip install --upgrade pip && \
-    apk add --update --upgrade --no-cache postgresql-client && \
-    apk add --update --upgrade --no-cache --virtual .tmp \
-        build-base postgresql-dev && \
-    pip install --no-cache-dir -r /requirements.txt && apk del .tmp
-
-COPY ./backend /backend
-WORKDIR /backend
-
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+COPY . /app/
