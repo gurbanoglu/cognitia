@@ -19,7 +19,6 @@ RUN apk update -v && apk add --no-cache -v \
     postgresql-dev \
     python3-dev \
     build-base \
-    libpq \
     openssl-dev \
     cargo
 
