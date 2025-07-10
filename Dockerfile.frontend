@@ -4,6 +4,8 @@ FROM node:22.11
 WORKDIR /frontend
 COPY ./frontend/package*.json ./
 
+RUN npm cache clean --force && npm install || cat npm-debug.log
+
 RUN npm cache clean --force && npm install
 
 # Now copy the rest of the app
