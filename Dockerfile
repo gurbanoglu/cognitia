@@ -11,6 +11,9 @@ WORKDIR /app
 # Ensure Alpine community repo is available (only needed once)
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.18/community" >> /etc/apk/repositories
 
+# (Optional) Show Alpine version for debug clarity
+RUN cat /etc/alpine-release
+
 # Install system dependencies with verbose output
 RUN apk update -v && apk add --no-cache -v \
     gcc \
@@ -31,8 +34,8 @@ RUN pip install --upgrade pip && \
 # Copy application code last (so app changes don't invalidate earlier layers)
 COPY . .
 
-# (Optional) Show Alpine version for debug clarity
-RUN cat /etc/alpine-release
+# # (Optional) Show Alpine version for debug clarity
+# RUN cat /etc/alpine-release
 
 # Set default run command — adjust for production as needed
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
