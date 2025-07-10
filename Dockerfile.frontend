@@ -1,14 +1,13 @@
 FROM node:22.11
 
-# Copy only package files first to leverage Docker caching
 WORKDIR /frontend
+
 COPY ./frontend/package*.json ./
 
-RUN npm cache clean --force && npm install || cat npm-debug.log
+# Run npm install and print npm-debug.log if it fails
+RUN npm cache clean --force && npm install || (cat npm-debug.log && exit 1)
 
-RUN npm cache clean --force && npm install
-
-# Now copy the rest of the app
+# Now copy the rest of the app files
 COPY ./frontend .
 
 CMD ["npm", "run", "dev"]
