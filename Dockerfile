@@ -14,6 +14,9 @@ RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.18/community" >> /etc/apk/rep
 # (Optional) Show Alpine version for debug clarity
 RUN cat /etc/alpine-release
 
+RUN ping -c 3 google.com
+RUN apk update
+
 # Install system dependencies with verbose output
 RUN apk update && apk add --no-cache \
     build-base \
