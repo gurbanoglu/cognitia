@@ -1,19 +1,39 @@
+# Use a slim, official base image
 FROM python:3.11-alpine
 
+# Set environment variables to reduce noise and avoid .pyc files
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set working directory
 WORKDIR /app
 
-# Debug Alpine version and repo config
-RUN cat /etc/alpine-release
-RUN cat /etc/apk/repositories
-
-# Add community repo if missing
+# Ensure Alpine community repo is available (only needed once)
 RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.22/community" >> /etc/apk/repositories
 
-# Update and install dependencies with verbose output
+# Install system dependencies with verbose output
 RUN apk update -v && apk add --no-cache -v \
     gcc \
     musl-dev \
     libffi-dev \
     postgresql-dev \
     python3-dev \
-    build-base
+    build-base \
+    libpq \
+    openssl-dev \
+    cargo
+
+# Install Python dependencies separately to leverage Docker layer caching
+COPY requirements.txt .
+
+RUN pip install --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code last (so app changes don't invalidate earlier layers)
+COPY . .
+
+# (Optional) Show Alpine version for debug clarity
+RUN cat /etc/alpine-release
+
+# Set default run command — adjust for production as needed
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
