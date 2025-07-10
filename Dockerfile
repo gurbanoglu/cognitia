@@ -15,13 +15,11 @@ RUN echo "https://dl-cdn.alpinelinux.org/alpine/v3.18/community" >> /etc/apk/rep
 RUN cat /etc/alpine-release
 
 # Install system dependencies with verbose output
-RUN apk update -v && apk add --no-cache -v \
-    gcc \
-    musl-dev \
+RUN apk update && apk add --no-cache \
+    build-base \
     libffi-dev \
     postgresql-dev \
     python3-dev \
-    build-base \
     openssl-dev \
     cargo
 
