@@ -137,11 +137,6 @@ const SignUp: React.FC = () => {
               {status === 'success' && <p>Verification email sent!</p>}
               {status === 'error' && <p>Failed to send verification email.</p>}
             </div>
-
-            <div className="flex justify-center items-center text-lg mt-4">
-              {status === 'success' && <p>Verification email sent!</p>}
-              {status === 'error' && <p>Failed to send verification email.</p>}
-            </div>
           </>
         }
       </div>

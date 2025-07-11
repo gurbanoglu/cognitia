@@ -145,14 +145,10 @@ class AiChatSession(models.Model):
 	def create_first_message(self, message):
 		"""Create the first message in the session."""
 		return [
-			self._create_message(
-				"You are a snarky and unhelpful assistant.",
-				"system"
-			),
 			self._create_message(message, "user")
 		]
-	
-	def messages(self):
+
+	def get_all_messages(self):
 		"""Return messages in the conversation including the AI response."""
 		all_messages = []
 		request = self.get_last_request()
@@ -182,12 +178,72 @@ class AiChatSession(models.Model):
 		elif last_request.status in [AiRequest.COMPLETE, AiRequest.FAILED]:
 			AiRequest.objects.create(
 				session=self,
-				messages=self.messages() + [
+				messages=self.get_all_messages() + [
 					self._create_message(message, "user")
 				]
 			)
 		else:
 			return
+		
+	def edit_user_message(self, message_index: int, new_content: str):
+		"""
+		Edit a specific user message and regenerate the response
+		for just that point.
+
+		Only messages[message_index] and messages[message_index + 1]
+		will change.
+		"""
+
+		last_request = self.get_last_request()
+
+		if not last_request:
+			raise ValueError("No existing messages to edit.")
+
+		# Copy the existing message history.
+		messages = list(last_request.messages)
+
+		if not (0 <= message_index < len(messages)):
+			raise IndexError("Invalid message index.")
+
+		# Make sure the edited message is from the user.
+		if messages[message_index]["role"] != "user":
+			raise ValueError("Only user messages can be edited.")
+
+		# Update the user message content.
+		messages[message_index]["content"] = new_content
+
+		# Truncate messages after the user message
+		# (remove old AI response + any later content)
+		truncated = messages[:message_index + 1]
+
+		client = OpenAI()
+
+		try:
+			# Regenerate the AI response for the new input
+			response = client.chat.completions.create(
+				model="gpt-4o-mini",
+				messages=truncated
+			)
+
+			assistant_reply = response.choices[0].message.to_dict()
+
+			# Reconstruct the messages list:
+			new_messages = messages[:message_index + 1] + [assistant_reply]
+
+			print('new messages:', new_messages)
+
+			# Save a new AiRequest with updated messages.
+			new_request = AiRequest.objects.create(
+				session=self,
+				messages=new_messages,
+				response=response.to_dict(),
+				status=AiRequest.COMPLETE
+			)
+
+			return new_request
+		except Exception as e:
+			print(f"Failed to regenerate answer: {e}")
+			raise
 
 	# Determines how the object will be outputted.
 	def __str__(self):
@@ -246,6 +302,7 @@ class AiRequest(models.Model):
 		"""Handle request."""
 		self.status = self.RUNNING
 		self.save()
+
 		client = OpenAI()
 
 		try:
@@ -254,7 +311,9 @@ class AiRequest(models.Model):
 				messages=self.messages
 			)
 
+			# The response from OpenAI.
 			self.response = completion.to_dict()
+
 			self.status = self.COMPLETE
 		except Exception:
 			self.status = self.FAILED

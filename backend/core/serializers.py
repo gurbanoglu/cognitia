@@ -29,7 +29,7 @@ class AiChatSessionSerializer(serializers.ModelSerializer):
     return representation
 
   def get_messages(self, obj):
-    return [msg for msg in obj.messages() if msg['role'] != 'system']
+    return [msg for msg in obj.get_all_messages() if msg['role'] != 'system']
 
   class Meta:
     model = AiChatSession

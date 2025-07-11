@@ -28,6 +28,7 @@ from core.views import (
   create_chat_session,
   chat_session,
   chat_session_detail,
+  update_user_message,
   save_chat_session,
   get_all_sessions
 )
@@ -45,5 +46,6 @@ urlpatterns = [
   path('api/get-csrf-token/', get_csrf_token),
   path('chat/<slug:slug>/', chat_session_detail),
   path('save-chat-session/', save_chat_session),
-  path('get-all-sessions/', get_all_sessions)
+  path('get-all-sessions/', get_all_sessions),
+  path('api/chat/update/<str:session_id>/<int:message_index>/', update_user_message)
 ]

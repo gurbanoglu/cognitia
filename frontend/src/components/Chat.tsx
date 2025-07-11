@@ -6,8 +6,9 @@ import { useSelector } from "react-redux";
 import NewChatButton from "../components/NewChatButton";
 import { useParams, useNavigate } from "react-router-dom";
 import { deleteChatSession } from "../api/deleteChatSession";
-import { Pencil, Trash2, Check } from "lucide-react";
+import { Pencil, Trash2, Check, Copy } from "lucide-react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
+import { updateChatSession } from "../api/updateChatSession";
 
 interface Message {
   role: string;
@@ -48,15 +49,20 @@ const Chat: React.FC = () => {
 
   const [hoveredSessionId, setHoveredSessionId] = useState<string | null>(null);
   const [menuOpenSessionId, setMenuOpenSessionId] = useState<string | null>(null);
-  const [renameWasClicked, setRenameWasClicked] = useState<boolean>(false);
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
 
-   const mounted = useRef(false);
+  const [renamingViaMenuSessionId, setRenamingViaMenuSessionId] = useState<string | null>(null);
+
+  const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
+  const [editedMessage, setEditedMessage] = useState<string>("");
+
+
+  const mounted = useRef(false);
 
   const handleClick = (event: MouseEvent) => {
     if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-      setMenuOpenSessionId(null); // Close the menu
+      setMenuOpenSessionId(null);
     }
   };
 
@@ -82,17 +88,11 @@ const Chat: React.FC = () => {
     };
   }, [menuOpenSessionId]);
 
-  // const toggleMenu = (sessionId: string) => {
-  //   if (menuOpenSessionId === sessionId) {
-  //     setMenuOpenSessionId(null);  // Close the menu
-  //   } else {
-  //     setMenuOpenSessionId(sessionId);  // Open the menu
-  //   }
-  // };
-
   const toggleMenu = (sessionId: string, fromRename = false) => {
     if (fromRename) {
-      setMenuOpenSessionId(null); // Close the menu if "Rename" is clicked
+      // Closes the "Rename and Delete" dropdown
+      // after the "Rename" button is clicked.
+      setMenuOpenSessionId(null);
     } else {
       if (menuOpenSessionId === sessionId) {
         setMenuOpenSessionId(null);  // Close the menu
@@ -170,13 +170,7 @@ const Chat: React.FC = () => {
 
   const deleteSession = async (sessionId: string) => {
     try {
-      const csrfToken = getCookie('csrftoken');
-      if (!csrfToken) return;
-
-      await apiClient.delete(
-        `/api/chat/sessions/${sessionId}/`,
-        { headers: { 'X-CSRFToken': csrfToken } }
-      );
+      deleteChatSession(sessionId);
 
       // Remove from local state
       setSessions(prev => prev.filter(session => session.session_id !== sessionId));
@@ -306,8 +300,6 @@ const Chat: React.FC = () => {
 
         // Add chat session to sidebar immediately.
         setSessions(prev => {
-          console.log('prev:', prev);
-
           return [
           ...prev,
             {
@@ -419,10 +411,11 @@ const Chat: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'space-between'
               }}
-              onMouseEnter={() => setHoveredSessionId(session.session_id)} // Set hovered session
+              onMouseEnter={() => setHoveredSessionId(session.session_id)}
               onMouseLeave={() => {
-                if (!menuOpenSessionId) {
-                  // Remove hovered session if menu is not open
+                if (!menuOpenSessionId && !renamingViaMenuSessionId) {
+                  /* Remove hovered session only if
+                     the menu is not open. */
                   setHoveredSessionId(null);
                 }
               }}
@@ -444,7 +437,8 @@ const Chat: React.FC = () => {
                   paddingRight: '0.5rem',
                   minHeight: '2.5rem',
                   display: 'flex',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  cursor: 'pointer'
                 }}
               >
                 {editingSessionId === session.session_id ? (
@@ -480,11 +474,12 @@ const Chat: React.FC = () => {
               {/* Show ⋯ button when the session is hovered */}
               {hoveredSessionId === session.session_id && (
                 <div style={{ position: "relative" }}>
-                  {renameWasClicked ?
+                  {renamingViaMenuSessionId === session.session_id ?
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: '1rem' }}>
+                      {/* Green checkmark button */}
                       <button
                         onClick={() => {
                           updateSessionTitle(
@@ -494,7 +489,7 @@ const Chat: React.FC = () => {
 
                           setEditingSessionId(null);
 
-                          setRenameWasClicked(false);
+                          setRenamingViaMenuSessionId(null);
                         }}
                         style={{
                           background: 'transparent',
@@ -512,8 +507,8 @@ const Chat: React.FC = () => {
 
                       <button
                         onClick={() => {
-                          setEditingSessionId(null);  // Cancel edit mode
-                          setRenameWasClicked(false); // Optional: reset state
+                          setEditingSessionId(null);
+                          setRenamingViaMenuSessionId(null);
                         }}
                         style={{
                           background: 'transparent',
@@ -523,9 +518,9 @@ const Chat: React.FC = () => {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          fontSize: '18px',   // Adjust size of the "X"
-                          color: 'red',       // Color of the "X"
-                          fontWeight: 'bold', // Make the "X" bold
+                          fontSize: '18px',
+                          color: 'red',
+                          fontWeight: 'bold'
                         }}
                         aria-label="Cancel rename"
                       >
@@ -544,7 +539,7 @@ const Chat: React.FC = () => {
                         padding: "0.25rem",
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
+                        justifyContent: "center"
                       }}
                       aria-label="Open session menu"
                     >
@@ -564,7 +559,7 @@ const Chat: React.FC = () => {
                         border: "1px solid #ccc",
                         borderRadius: "4px",
                         zIndex: 9999,
-                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)",
+                        boxShadow: "0 2px 6px rgba(0,0,0,0.2)"
                       }}
                     >
                       <div
@@ -572,7 +567,7 @@ const Chat: React.FC = () => {
                           setEditingSessionId(session.session_id);
                           setEditingTitle(session.title || "");
                           toggleMenu(session.session_id, true);
-                          setRenameWasClicked(true);
+                          setRenamingViaMenuSessionId(session.session_id);
                         }}
                         style={{
                           padding: "0.5rem",
@@ -632,15 +627,91 @@ const Chat: React.FC = () => {
           >
             <div>
               <div>
-                {messages.map((msg, index) => (
-                  <div
-                    key={index}
-                    className={`message${msg.role === "user" ? " user" : ""}`}
-                  >
-                    {msg.role === "user" ? "Me: " : "AI: "}
-                    {msg.content}
-                  </div>
-                ))}
+                {messages.map((msg, index) => {
+                  const isUser = msg.role === "user";
+                  const isEditing = editingMessageIndex === index;
+
+                  const handleUpdateMessage = async () => {
+                    const csrfToken = getCookie('csrftoken');
+
+                    if (!selectedSessionId || !csrfToken) return;
+
+                    try {
+                      const response = await updateChatSession(selectedSessionId, index, editedMessage);
+
+                      setSessionMessages(prev => ({
+                        ...prev,
+                        [selectedSessionId]: response?.data?.messages
+                      }));
+
+                      setEditingMessageIndex(null);
+                    } catch (error) {
+                      console.error("Failed to update message:", error);
+                    }
+                  };
+
+                  return (
+                    <div key={index} className={`message${isUser ? " user" : ""}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ flex: 1 }}>
+                        {isUser ? "Me: " : "AI: "}
+                        {isUser && isEditing ? (
+                          <div style={{ display: "flex" }}>
+                            <input
+                              value={editedMessage}
+                              onChange={(e) => setEditedMessage(e.target.value)}
+                              style={{ flex: 1 }}
+                            />
+
+                            <button onClick={handleUpdateMessage}>
+                              Save
+                            </button>
+
+                            <button
+                              onClick={
+                                () => setEditingMessageIndex(null)
+                            }>
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <span>{msg.content}</span>
+                        )}
+                      </div>
+
+                      {/* Buttons only for user messages and if NOT editing */}
+                      {isUser && !isEditing && (
+                        <div style={{ display: "flex", marginLeft: "1rem" }}>
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(msg.content).then(() => {
+                                console.log("Copied to clipboard!");
+                              }).catch(() => {
+                                console.log("Failed to copy");
+                              });
+                            }}
+                            aria-label="Copy message"
+                            style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                          >
+                            <Copy size={16} />
+                            Copy
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setEditingMessageIndex(index);
+                              setEditedMessage(msg.content);
+                            }}
+                            aria-label="Edit message"
+                            style={{ fontSize: "0.8rem", display: "flex", alignItems: "center", gap: "0.25rem" }}
+                          >
+                            <Pencil size={16} />
+                            Edit
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </div>

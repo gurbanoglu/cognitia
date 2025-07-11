@@ -24,9 +24,10 @@
   "devDependencies": {
     "@aws-amplify/backend": "^1.16.1",
     "@aws-amplify/backend-cli": "^1.8.0",
+    "@babel/preset-env": "^7.28.0",
+    "@babel/preset-react": "^7.27.1",
     "@tailwindcss/postcss": "^4.1.8",
     "@tailwindcss/vite": "^4.1.8",
-    "@types/babel__core": "^7.20.5",
     "@types/babel__generator": "^7.27.0",
     "@types/babel__template": "^7.4.4",
     "@types/babel__traverse": "^7.20.7",
@@ -38,17 +39,20 @@
     "@vitejs/plugin-react": "^4.3.1",
     "autoprefixer": "^10.4.21",
     "aws-cdk-lib": "^2.189.1",
+    "babel-jest": "^30.0.4",
     "constructs": "^10.4.2",
     "esbuild": "^0.25.6",
     "eslint": "^8.57.0",
     "eslint-plugin-react": "^7.34.3",
     "eslint-plugin-react-hooks": "^4.6.2",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "jest": "^30.0.4",
     "postcss": "^8.5.4",
+    "react-test-renderer": "^18.3.1",
     "sass": "^1.89.1",
     "tailwindcss": "^4.1.8",
     "tsx": "^4.20.3",
     "typescript": "^5.8.3",
-    "vite": "^5.4.19"
+    "vite": "^7.0.3"
   }
 }
