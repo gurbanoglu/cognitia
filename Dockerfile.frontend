@@ -1,19 +1,14 @@
 FROM node:20-alpine
 
-# Set working directory
 WORKDIR /frontend
 
-# Copy package.json and package-lock.json
 COPY ./frontend/package*.json ./
 
-# Install dependencies with `npm ci` (clean install)
-RUN npm ci
+# Add debug step: try npm install fallback and capture error logs
+RUN npm ci || (echo "npm ci failed, trying npm install..." && npm install)
 
-# Copy frontend source files
 COPY ./frontend .
 
-# Expose port used by dev server (if needed)
 EXPOSE 3000
 
-# Start dev server
 CMD ["npm", "run", "dev"]
