@@ -68,7 +68,6 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/backend
-      - ./remove_duplicates.sql:/remove_duplicates.sql
 volumes:
   node_modules:
   db-data:
