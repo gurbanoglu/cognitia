@@ -2,11 +2,24 @@ FROM node:20-alpine
 
 WORKDIR /frontend
 
-COPY ./frontend/package*.json ./
+# Copy only package files first to leverage Docker cache
+COPY ./frontend/package.json ./frontend/package-lock.json ./
 
-# Add debug step: try npm install fallback and capture error logs
-RUN npm ci || (echo "npm ci failed, trying npm install..." && npm install)
+# Install dependencies with a fallback, logging errors to file
+RUN set -eux; \
+    echo "Starting npm install..."; \
+    npm --version; \
+    node --version; \
+    npm ci --legacy-peer-deps || { \
+        echo "npm ci failed, trying npm install..."; \
+        npm install --legacy-peer-deps || { \
+            echo "npm install failed. See npm-debug.log"; \
+            cat /root/npm-debug.log; \
+            exit 1; \
+        }; \
+    }
 
+# Now copy the rest of frontend source code
 COPY ./frontend .
 
 EXPOSE 3000
