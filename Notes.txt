@@ -261,6 +261,19 @@ Once the project has been deployed on AWS Amplify,
 load the subsequent URL in a web browser:
 https://main.d1vpw25gp1hyei.amplifyapp.com/sign-up/
 
+One directory level above cognitia:
+rm app.tar.gz
+
+tar --exclude='cognitia/venv' --exclude='cognitia/frontend/node_modules' -czf app.tar.gz cognitia
+
+scp -i ./../.ssh/cognitia-dev-key.pem app.tar.gz ec2-user@16.171.142.178:~
+
+In the EC2 session:
+rm -rf cognitia
+tar -xzf app.tar.gz
+cd cognitia
+docker compose build --no-cache
+
 Next steps:
 If I sign in on a different device, then I should
 have to click on the link sent to my email.

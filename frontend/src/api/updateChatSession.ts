@@ -14,6 +14,8 @@ export const updateChatSession = async (
     return;
   }
 
+  console.log('editedMessage:', editedMessage);
+
   try {
     const response = await apiClient.patch(
       `/api/chat/update/${selectedSessionId}/${messageIndex}/`,

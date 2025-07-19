@@ -22,13 +22,8 @@ services:
       dockerfile: Dockerfile.frontend
     ports:
       - 5173:5173
-    develop:
-      watch:
-        - action: sync
-          path: ./frontend/
-          target: /frontend
-          ignore:
-            - node_modules
+    volumes:
+      - ./frontend:/frontend
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -43,6 +38,20 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+  celery:
+    build:
+      context: .
+    command: celery -A backend worker --loglevel=info
+    depends_on:
+      - backend
+      - rabbitmq
+    environment:
+      - CELERY_BROKER_URL=amqp://mquser:${RABBITMQ_PASSWORD}@rabbitmq:5672//
+      - DB_HOST=${DB_HOST}
+      - DB_NAME=${DB_NAME}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
   backend:
     build:
       context: .

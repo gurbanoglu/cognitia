@@ -113,6 +113,8 @@ const Chat: React.FC = () => {
     if (!isAuthenticated || !csrfToken) return;
 
     try {
+      console.log('request sent to /api/chat/sessions/');
+
       const response = await apiClient.get(
         "/api/chat/sessions/",
         {
@@ -197,6 +199,8 @@ const Chat: React.FC = () => {
       try {
         const allSessions = await fetchAllSessions();
 
+        console.log('allSessions:', allSessions);
+
         setSessions(allSessions.sessions);
       } catch (error) {
         console.error("Failed to fetch sessions:", error);
@@ -206,20 +210,24 @@ const Chat: React.FC = () => {
     fetchData();
   }, []);
 
-  useEffect(() => {
-    const csrfToken = getCookie('csrftoken');
+  // useEffect(() => {
+  //   const csrfToken = getCookie('csrftoken');
 
-    if (selectedSessionId && csrfToken) {
-      fetchSessions();
-    }
-  }, [selectedSessionId, csrfToken]);
+  //   if (selectedSessionId && csrfToken) {
+  //     console.log('217');
+  //     fetchSessions();
+  //   }
+  // }, [selectedSessionId, csrfToken]);
 
   useEffect(() => {
+    fetchSessions();
+
     if (sessionSlug && sessions.length > 0) {
       const matchedSession = sessions.find(s => s.slug === sessionSlug);
 
       if (matchedSession) {
         setSelectedSessionId(matchedSession.session_id);
+
         setIsNewUnsavedChat(false);
 
         if (csrfToken) {
@@ -349,6 +357,7 @@ const Chat: React.FC = () => {
     navigate(`/chat/${slug}`);
 
     setTimeout(async () => {
+      console.log('358');
       setSelectedSessionId(sessionId);
       setIsNewUnsavedChat(false);
 
@@ -425,6 +434,8 @@ const Chat: React.FC = () => {
                   if (session.slug && editingSessionId !== session.session_id) {
                     loadSessionById(session.session_id, session.slug);
                   }
+
+                  console.log('Chat session clicked:', session.session_id);
                 }}
                 onDoubleClick={() => {
                   setEditingSessionId(session.session_id);

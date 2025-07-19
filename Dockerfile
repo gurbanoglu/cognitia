@@ -1,38 +1,19 @@
-FROM python:3.11-alpine
+FROM python:3.13.0-alpine3.20
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED 1
 
-# Set working directory
+COPY ./requirements.txt /requirements.txt
+
+ENV PATH="/py/bin:$PATH"
+RUN python -m venv /py && \
+    pip install --upgrade pip && \
+    apk add --update --upgrade --no-cache postgresql-client && \
+    apk add --update --upgrade --no-cache --virtual .tmp \
+        build-base postgresql-dev
+
+RUN pip install -r /requirements.txt && apk del .tmp
+
+COPY ./backend /backend
 WORKDIR /backend
 
-# Update repositories and install dependencies
-RUN apk add --no-cache \
-    build-base \
-    libffi-dev \
-    postgresql-dev \
-    python3-dev \
-    openssl-dev \
-    rust \
-    cargo \
-    bash \
-    gcc \
-    musl-dev \
-    curl
-
-# Copy Python requirements
-COPY requirements.txt .
-
-# Install Python dependencies
-RUN pip install --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY . .
-
-# Expose Django development port
-EXPOSE 8000
-
-# Default run command
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

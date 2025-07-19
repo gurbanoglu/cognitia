@@ -1,8 +1,8 @@
-import json
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
+from backend.views import User
 from core.models import AiChatSession
 from core.serializers import AiChatSessionSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -10,8 +10,11 @@ from rest_framework.permissions import IsAuthenticated
 from django.utils.text import slugify
 from .models import AiChatSession, AiRequest
 from rest_framework.exceptions import NotFound
+from celery import shared_task
 import uuid
 from rest_framework.views import APIView
+from django.core.cache import cache
+import time
 
 @api_view(['GET', 'POST'])
 def create_chat_session(request):
@@ -21,6 +24,8 @@ def create_chat_session(request):
     user = request.user
 
     session = AiChatSession.objects.create(user=user)
+
+    print('views.py: create_chat_session invoked')
   else:
     # If an end user isn't signed in.
     session = AiChatSession.objects.create()
@@ -96,10 +101,10 @@ def save_chat_session(request):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def get_all_sessions(request):
+  # AiChatSession.objects.all().delete()
+
   sessions = AiChatSession.objects.filter(user=request.user)
   serializer = AiChatSessionSerializer(sessions, many=True)
-
-  # AiChatSession.objects.all().delete()
 
   print('sessions:', sessions)
 
@@ -154,7 +159,28 @@ def chat_session(request, session_id):
       {"message": "Session deleted successfully."},
       status=status.HTTP_200_OK
     )
-  
+
+from django.core.cache import cache
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_edit_result(request, task_id: str):
+  result = cache.get(f"edit_result_{task_id}")
+  if result:
+    return Response({"status": "done", "messages": result})
+  else:
+    return Response({"status": "pending"})
+
+@shared_task
+def async_edit_user_message(session_id, user_id, message_index, updated_message):
+  user = User.objects.get(pk=user_id)
+  session = AiChatSession.objects.get(session_id=session_id, user=user)
+  result = session.edit_user_message(message_index, updated_message)
+
+  # Store result in cache or DB for polling (example using Django cache)
+  cache.set(f"edit_result_{async_edit_user_message.request.id}", result, timeout=3600)
+  return result
+
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
 def update_user_message(request, session_id: str, message_index: int):
@@ -164,15 +190,27 @@ def update_user_message(request, session_id: str, message_index: int):
     return Response({"error": "No new content provided."}, status=400)
 
   try:
-    session = AiChatSession.objects.get(session_id=session_id, user=request.user)
-    new_request = session.edit_user_message(message_index, updated_message)
+    start = time.time()
+    # new_request = session.edit_user_message(message_index, updated_message)
+    print('update_user_message invoked')
 
-    print('new_request.messages:', new_request.messages)
+    # Queue the Celery task
+    task = async_edit_user_message.delay(
+      session_id,
+      request.user.id,
+      message_index,
+      updated_message
+    )
 
+    end = time.time()
+
+    print(f"edit_user_message took {end - start:.2f} seconds")
+
+    # Return a response with the task ID
     return Response({
-      "status": "ok",
-      "messages": new_request.messages,
-      "response": new_request.response
+      "status": "pending",
+      "task_id": task.id,
+      "detail": "Your update is being processed."
     })
   except Exception as e:
     return Response({"error": str(e)}, status=400)
