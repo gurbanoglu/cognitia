@@ -1,7 +1,8 @@
 import { 
   BrowserRouter as Router,
   Routes,
-  Route } from 'react-router-dom';
+  Route
+} from 'react-router-dom';
 
 // The better practice is to exclude the file
 // extension when importing components.
@@ -9,6 +10,7 @@ import SignUp from "./components/SignUp";
 import EmailSent from "./components/EmailSent";
 import Chat from "./components/Chat";
 import ConfirmEmail from "./components/ConfirmEmail";
+import SendMessage from "./components/SendMessage";
 import "./App.css";
 
 const App = () => (
@@ -24,6 +26,8 @@ const App = () => (
       <Route path="/chat" element={<Chat />} />
 
       <Route path="/chat/:slug" element={<Chat />} />
+
+      <Route path="/send-message" element={<SendMessage />} />
     </Routes>
   </Router>
 );

@@ -9,8 +9,9 @@ import { deleteChatSession } from "../api/deleteChatSession";
 import { Pencil, Trash2, Check, Copy } from "lucide-react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import { updateChatSession } from "../api/updateChatSession";
+import { NotificationSocket } from "./NotificationSocket";
 
-interface Message {
+export interface Message {
   role: string;
   content: string;
 }
@@ -95,9 +96,11 @@ const Chat: React.FC = () => {
       setMenuOpenSessionId(null);
     } else {
       if (menuOpenSessionId === sessionId) {
-        setMenuOpenSessionId(null);  // Close the menu
+        // Close the menu
+        setMenuOpenSessionId(null);
       } else {
-        setMenuOpenSessionId(sessionId);  // Open the menu
+        // Open the menu
+        setMenuOpenSessionId(sessionId);
       }
     }
   };
@@ -123,8 +126,13 @@ const Chat: React.FC = () => {
       );
 
       setSessions(prev => {
+        console.log('prev:', prev);
+
         const tempSessions = prev.filter(s => s.session_id.startsWith("temp-"));
-        return [...response.data, ...tempSessions];
+
+        console.log('response.data:', response.data);
+
+        return [response.data.messages || [], ...tempSessions];
       });
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
@@ -373,8 +381,16 @@ const Chat: React.FC = () => {
       ? []
       : [];
 
+  const handleSocketMessage = (updatedMessages: Record<string, Message[]>) => {
+    setSessionMessages(updatedMessages);
+  };
+
   return (
     <div className="wrapper">
+      <NotificationSocket
+        sessionId={selectedSessionId}
+        onMessage={handleSocketMessage} />
+
       <div className="chat-layout"
         style={{ display: 'flex', width: '80%' }}>
 

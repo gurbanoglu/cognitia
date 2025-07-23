@@ -22,8 +22,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-# Application definition
-
 INSTALLED_APPS = [
 	'django.contrib.admin',
 	'django.contrib.auth',
@@ -32,7 +30,8 @@ INSTALLED_APPS = [
 	'django.contrib.messages',
 	'django.contrib.staticfiles',
   'corsheaders',
-	'core'
+	'core',
+  'channels'
 ]
 
 SITE_ID = 1
@@ -203,3 +202,20 @@ EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
 
 AUTH_USER_MODEL = 'core.CustomUser'
+
+ASGI_APPLICATION = 'backend.asgi.application'
+
+CHANNEL_LAYERS = {
+	"default": {
+		"BACKEND": "channels.layers.InMemoryChannelLayer"
+	}
+}
+
+# CHANNEL_LAYERS = {
+#   "default": {
+#     "BACKEND": "channels_redis.core.RedisChannelLayer",
+#     "CONFIG": {
+#       "hosts": [("redis", 6379)],
+#     },
+#   },
+# }

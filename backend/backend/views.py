@@ -4,7 +4,6 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework import status
-from django.contrib.auth import get_user_model
 from core.models import ActivationToken
 from datetime import timedelta
 from django.utils import timezone
@@ -12,7 +11,10 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 import secrets
 import requests
+
 from django.contrib.auth import get_user_model
+# from core.models import CustomUser
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -34,9 +36,9 @@ def create_activation_token_obj(user, activation_token):
 	)
 	print('Activation token object created.')
 
-User = get_user_model()
-
 def create_user_if_not_exists(email_address, activation_token):
+	User = get_user_model()
+
 	# Try to find the user
 	user = User.objects.filter(email_address=email_address).first()
 
@@ -164,6 +166,8 @@ def verify_token(request):
 def check_if_active(request):
 	email_address = request.data.get('emailAddress')
 
+	User = get_user_model()
+
 	# Get the user from the database.
 	user = User.objects.filter(email_address=email_address).first()
 
@@ -187,6 +191,8 @@ def check_if_active(request):
 def login_with_email(request):
 	try:
 		email_address = request.data.get('emailAddress')
+
+		User = get_user_model()
 
 		# Get the user from the database.
 		user = User.objects.filter(email_address=email_address).first()
@@ -235,6 +241,8 @@ class GoogleAuthView(APIView):
 		user_info = google_response.json()
 
 		email_address = user_info['email_address']
+
+		User = get_user_model()
 
 		# get_or_create() ensures the user is saved
 		# if they do not already exist.

@@ -2,7 +2,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from backend.views import User
+# from backend.views import User
 from core.models import AiChatSession
 from core.serializers import AiChatSessionSerializer
 from rest_framework.decorators import api_view, permission_classes
@@ -103,10 +103,13 @@ def save_chat_session(request):
 def get_all_sessions(request):
   # AiChatSession.objects.all().delete()
 
+  # print('all sessions after delete:', list(AiChatSession.objects.all()))
+
   sessions = AiChatSession.objects.filter(user=request.user)
   serializer = AiChatSessionSerializer(sessions, many=True)
 
-  print('sessions:', sessions)
+  # print('user:', request.user)
+  # print('user sessions after delete:', list(sessions))
 
   return Response({
     "sessions": serializer.data
@@ -194,7 +197,8 @@ def update_user_message(request, session_id: str, message_index: int):
     # new_request = session.edit_user_message(message_index, updated_message)
     print('update_user_message invoked')
 
-    # Queue the Celery task
+    # Queue the Celery task in the API. Include a unique
+    # task/session ID if you want to track it.
     task = async_edit_user_message.delay(
       session_id,
       request.user.id,

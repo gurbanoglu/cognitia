@@ -24,6 +24,10 @@ services:
       - 5173:5173
     volumes:
       - ./frontend:/frontend
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # networks:
+    #   - cognitia_network
   rabbitmq:
     image: rabbitmq:3-management
     ports:
@@ -38,6 +42,10 @@ services:
       timeout: 5s
       retries: 5
       start_period: 10s
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    # networks:
+    #   - cognitia_network
   celery:
     build:
       context: .
@@ -52,9 +60,12 @@ services:
       - DB_USER=${DB_USER}
       - DB_PASS=${DB_PASS}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+    # networks:
+    #   - cognitia_network
   backend:
     build:
       context: .
+    working_dir: /backend
     ports:
       - "8000:8000"
     environment:
@@ -66,10 +77,6 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - EMAIL_HOST_USER=${EMAIL_HOST_USER}
       - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD}
-    command: >
-      sh -c "python manage.py makemigrations &&
-             python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -77,6 +84,18 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/backend
+    # networks:
+    #   - cognitia_network
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    # networks:
+    #   - cognitia_network
 volumes:
   node_modules:
   db-data:
+  rabbitmq_data:
+# networks:
+#   cognitia_network:
+#     driver: bridge

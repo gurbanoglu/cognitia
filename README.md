@@ -6,7 +6,7 @@ This file cannot contain comments!
 From the cognitia directory, execute the following command
 in a terminal window to launch the application:
 
-docker compose up --watch --build
+docker compose up --build
 
 docker compose up builds (if needed), creates, starts,
 and attaches to containers defined in your docker-compose.yml
@@ -16,14 +16,6 @@ file.
 Builds images for your services before starting the
 containers, ensuring any changes in your Dockerfiles
 or dependencies are included.
-
---watch:
-Watches your source code for changes (--watch). If
-you update files in your project, Docker Compose will
-automatically rebuild the affected images and restart
-the relevant containers, so your changes are reflected
-immediately without having to stop the containers,
-rebuild the images, and restart the containers.
 
 Local:
 http://localhost:5173/

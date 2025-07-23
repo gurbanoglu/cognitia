@@ -1,16 +1,18 @@
-"""
-ASGI config for backend project.
+import os
+from channels.routing import ProtocolTypeRouter, URLRouter
+from django.core.asgi import get_asgi_application
+import django
 
-It exposes the ASGI callable as a module-level variable named ``application``.
+django.setup()
 
-For more information on this file, see
-https://docs.djangoproject.com/en/5.1/howto/deployment/asgi/
-"""
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "backend.settings")
 
 import os
-
+from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
+from backend.routing import websocket_urlpatterns
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
-
-application = get_asgi_application()
+application = ProtocolTypeRouter({
+  "http": get_asgi_application(),
+  "websocket": URLRouter(websocket_urlpatterns)
+})

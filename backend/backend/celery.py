@@ -1,5 +1,4 @@
 import os
-
 from celery import Celery
 
 # Set the default Django settings module for the 'celery' program.
@@ -18,6 +17,6 @@ app.autodiscover_tasks()
 
 @app.task(bind=True, ignore_result=True)
 def debug_task(self):
-    print(f'Request: {self.request!r}')
+  print(f'Request: {self.request!r}')
 
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True

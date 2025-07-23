@@ -9,11 +9,16 @@ RUN python -m venv /py && \
     pip install --upgrade pip && \
     apk add --update --upgrade --no-cache postgresql-client && \
     apk add --update --upgrade --no-cache --virtual .tmp \
-        build-base postgresql-dev
+    build-base postgresql-dev
 
 RUN pip install -r /requirements.txt && apk del .tmp
 
 COPY ./backend /backend
 WORKDIR /backend
 
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Copy wait-for-it.sh and make it executable
+# COPY ./wait-for-it.sh /wait-for-it.sh
+# RUN chmod +x /wait-for-it.sh
+
+# CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+CMD ["daphne", "-b", "0.0.0.0", "-p", "8000", "backend.asgi:application"]
