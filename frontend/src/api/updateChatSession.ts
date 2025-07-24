@@ -18,7 +18,7 @@ export const updateChatSession = async (
 
   try {
     const response = await apiClient.patch(
-      `/api/chat/update/${selectedSessionId}/${messageIndex}/`,
+      `/api/chat-page/update/${selectedSessionId}/${messageIndex}/`,
       {
         updated_message: editedMessage
       },

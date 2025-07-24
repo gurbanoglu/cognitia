@@ -2,13 +2,12 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-# from backend.views import User
 from core.models import AiChatSession
 from core.serializers import AiChatSessionSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.utils.text import slugify
-from .models import AiChatSession, AiRequest
+from .models import AiChatSession, CustomUser
 from rest_framework.exceptions import NotFound
 from celery import shared_task
 import uuid
@@ -65,9 +64,11 @@ def save_chat_session(request):
   # Establish a session ID, title, slug, and save
   # the messages.
 
-  # The first message that an end user sends
+  # The first input that an end user sends
   # in a chat session.
-  message = request.data.get('message')
+  message = request.data.get('input')
+
+  print('backend/core/views.py save_chat_session message:', message)
 
   # The title of a chat session can be fifty
   # characters at most.
@@ -163,8 +164,6 @@ def chat_session(request, session_id):
       status=status.HTTP_200_OK
     )
 
-from django.core.cache import cache
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_edit_result(request, task_id: str):
@@ -176,7 +175,7 @@ def get_edit_result(request, task_id: str):
 
 @shared_task
 def async_edit_user_message(session_id, user_id, message_index, updated_message):
-  user = User.objects.get(pk=user_id)
+  user = CustomUser.objects.get(pk=user_id)
   session = AiChatSession.objects.get(session_id=session_id, user=user)
   result = session.edit_user_message(message_index, updated_message)
 

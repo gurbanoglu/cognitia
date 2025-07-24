@@ -8,9 +8,9 @@ import {
 // extension when importing components.
 import SignUp from "./components/SignUp";
 import EmailSent from "./components/EmailSent";
-import Chat from "./components/Chat";
+import ChatPage from "./components/ChatPage";
 import ConfirmEmail from "./components/ConfirmEmail";
-import SendMessage from "./components/SendMessage";
+import SendMessage from "./components/InputField";
 import "./App.css";
 
 const App = () => (
@@ -23,11 +23,9 @@ const App = () => (
       <Route path="/confirm-email/:activationToken"
         element={<ConfirmEmail />} />
 
-      <Route path="/chat" element={<Chat />} />
+      <Route path="/chat-page" element={<ChatPage />} />
 
-      <Route path="/chat/:slug" element={<Chat />} />
-
-      <Route path="/send-message" element={<SendMessage />} />
+      <Route path="/chat-page/:slug" element={<ChatPage />} />
     </Routes>
   </Router>
 );

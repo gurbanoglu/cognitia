@@ -11,7 +11,7 @@ export const deleteChatSession = async (sessionId: string): Promise<void> => {
 
   try {
     const response = await apiClient.delete(
-        `/api/chat/sessions/${sessionId}/`,
+        `/api/chat-page/sessions/${sessionId}/`,
         { headers: { 'X-CSRFToken': csrfToken } }
     );
 

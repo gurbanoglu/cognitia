@@ -37,15 +37,15 @@ from .views import get_csrf_token
 
 urlpatterns = [
   path('admin/', admin.site.urls),
-	path('api/chat/sessions/', create_chat_session),
-	path('api/chat/sessions/<str:session_id>/', chat_session),
+	path('api/chat-page/sessions/', create_chat_session),
+	path('api/chat-page/sessions/<str:session_id>/', chat_session),
 	path('send-verification-code/', send_verification_code),
 	path('verify-token/', verify_token),
   path('check-if-active/', check_if_active),
   path('login-with-email/', login_with_email),
   path('api/get-csrf-token/', get_csrf_token),
-  path('chat/<slug:slug>/', chat_session_detail),
+  path('chat-page/<slug:slug>/', chat_session_detail),
   path('save-chat-session/', save_chat_session),
   path('get-all-sessions/', get_all_sessions),
-  path('api/chat/update/<str:session_id>/<int:message_index>/', update_user_message)
+  path('api/chat-page/update/<str:session_id>/<int:message_index>/', update_user_message)
 ]

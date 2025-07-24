@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../api/apiClient";
 import { getCookie } from "../api/getCookie";
 import { RootState } from './../app/store';
@@ -9,28 +9,43 @@ import { deleteChatSession } from "../api/deleteChatSession";
 import { Pencil, Trash2, Check, Copy } from "lucide-react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import { updateChatSession } from "../api/updateChatSession";
-import { NotificationSocket } from "./NotificationSocket";
+import InputField from "./InputField";
 
 export interface Message {
   role: string;
   content: string;
 }
 
+interface ChatProps {
+  sessions: { session_id: string; title?: string; slug?: string }[];
+  setSessions: React.Dispatch<React.SetStateAction<{ session_id: string; title?: string; slug?: string }[]>>;
+
+  selectedSessionId: string | null;
+  setSelectedSessionId: React.Dispatch<React.SetStateAction<string | null>>;
+
+  isNewUnsavedChat: boolean;
+  setIsNewUnsavedChat: React.Dispatch<React.SetStateAction<boolean>>;
+
+  sessionMessages: Record<string, Message[]>;
+  setSessionMessages: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
+
+  fetchMessages: (sessionId: string, csrfToken: string) => Promise<void>;
+
+  loadSessionById: (sessionId: string, slug: string) => Promise<void>;
+}
+
 /* Controlled component
+
    Keeping track of the input entered into
    that component. */
-const Chat: React.FC = () => {
-
+const Chat: React.FC<ChatProps> = ({
+  sessions, setSessions,
+  selectedSessionId, setSelectedSessionId,
+  isNewUnsavedChat, setIsNewUnsavedChat,
+  sessionMessages, setSessionMessages,
+  fetchMessages, loadSessionById
+}) => {
   const [message, setMessage] = useState<string>("");
-
-  /*
-  sessionMessages is not an array, it's an object like:
-
-  {
-    "session-id-123": [ { role: "user", content: "Hi" } ],
-  }
-  */
-  const [sessionMessages, setSessionMessages] = useState<Record<string, Message[]>>({});
 
   const isAuthenticated = useSelector(
     (state: RootState) => state.auth.isAuthenticated
@@ -39,11 +54,6 @@ const Chat: React.FC = () => {
   const csrfToken = useSelector((state: RootState) => state.auth.csrfToken);
 
   const [sessionSlug, setSessionSlug] = useState<string>('');
-  const [sessions, setSessions] = useState<{ session_id: string; title?: string; slug?: string }[]>([]);
-  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
-
-  // Track if the current chat is a new unsaved chat (blank chat).
-  const [isNewUnsavedChat, setIsNewUnsavedChat] = useState(true);
 
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
@@ -57,7 +67,6 @@ const Chat: React.FC = () => {
 
   const [editingMessageIndex, setEditingMessageIndex] = useState<number | null>(null);
   const [editedMessage, setEditedMessage] = useState<string>("");
-
 
   const mounted = useRef(false);
 
@@ -116,10 +125,10 @@ const Chat: React.FC = () => {
     if (!isAuthenticated || !csrfToken) return;
 
     try {
-      console.log('request sent to /api/chat/sessions/');
+      console.log('request sent to /api/chat-page/sessions/');
 
       const response = await apiClient.get(
-        "/api/chat/sessions/",
+        "/api/chat-page/sessions/",
         {
           headers: { "X-CSRFToken": csrfToken }
         }
@@ -158,7 +167,7 @@ const Chat: React.FC = () => {
       if (!csrfToken) return;
 
       await apiClient.put(
-        `/api/chat/sessions/${sessionId}/`,
+        `/api/chat-page/sessions/${sessionId}/`,
         { title: newTitle },
         { headers: { 'X-CSRFToken': csrfToken } }
       );
@@ -185,17 +194,23 @@ const Chat: React.FC = () => {
       // Remove from local state
       setSessions(prev => prev.filter(session => session.session_id !== sessionId));
 
-      // If deleted session was selected, reset selected session
+      // If deleted session was selected, reset selected session.
       if (selectedSessionId === sessionId) {
         setSelectedSessionId(null);
+
         setIsNewUnsavedChat(true);
+
         setSessionSlug("");
+
         setSessionMessages(prev => {
           const copy = { ...prev };
+
           delete copy[sessionId];
+
           return copy;
         });
-        navigate('/chat');
+
+        navigate('/chat-page');
       }
     } catch (error) {
       console.error("Failed to delete session:", error);
@@ -209,7 +224,9 @@ const Chat: React.FC = () => {
 
         console.log('allSessions:', allSessions);
 
-        setSessions(allSessions.sessions);
+        // Safeguard sessions, so that it is never
+        // undefined, but instead an empty array.
+        setSessions(allSessions.sessions ?? []);
       } catch (error) {
         console.error("Failed to fetch sessions:", error);
       }
@@ -230,6 +247,12 @@ const Chat: React.FC = () => {
   useEffect(() => {
     fetchSessions();
 
+    if (sessions.length == 0) {
+      console.log('Chat.tsx deleteSession() session.length == 0');
+
+      setIsNewUnsavedChat(true);
+    }
+
     if (sessionSlug && sessions.length > 0) {
       const matchedSession = sessions.find(s => s.slug === sessionSlug);
 
@@ -245,135 +268,12 @@ const Chat: React.FC = () => {
     }
   }, [slug, sessions, csrfToken]);
 
-  // Necessary for obtaining OpenAI API responses.
-  const fetchMessages = async (
-    sessionId: string,
-    csrfToken: string
-  ) => {
-    const response = await apiClient.get(
-      `/api/chat/sessions/${sessionId}/`,
-      {
-        headers: {
-          'X-CSRFToken': csrfToken
-        }
-      }
-    );
-
-    const data = response.data;
-
-    setSessionMessages(prev => ({
-      ...prev,
-      [sessionId]: data.messages
-    }));
-  };
-
-  const postMessage = async (sessionId: string, message: string) => {
-    const csrfToken = getCookie('csrftoken');
-
-    await apiClient.post(
-      `/api/chat/sessions/${sessionId}/`,
-      {message},
-      {
-        headers: {
-          'X-CSRFToken': csrfToken
-        }
-      }
-    );
-
-    if (csrfToken) {
-      await fetchMessages(sessionId, csrfToken);
-    }
-  };
-
-  const sendMessage = async (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key !== "Enter" || !message.trim()) return;
-
-    const csrfToken = getCookie('csrftoken');
-
-    if (!csrfToken) {
-      console.warn("No CSRF token available.");
-      return;
-    }
-
-    let activeSessionId = selectedSessionId;
-
-    // If in new a unsaved chat mode, create a
-    // backend session now.
-    if (isNewUnsavedChat) {
-      try {
-        const response = await apiClient.post(
-          '/save-chat-session/',
-          {message},
-          { headers: { 'X-CSRFToken': csrfToken } }
-        );
-
-        activeSessionId = response.data.session_id;
-
-        setSessionSlug(response.data.slug);
-
-        setSelectedSessionId(activeSessionId);
-        setIsNewUnsavedChat(false);
-
-        // Add chat session to sidebar immediately.
-        setSessions(prev => {
-          return [
-          ...prev,
-            {
-              session_id: response.data.session_id,
-              slug: response.data.slug,
-              title: response.data.title
-            }
-          ];
-        });
-
-        if (response.data.slug) {
-          navigate(`/chat/${response.data.slug}`);
-        }
-      } catch (error) {
-        console.error("Error creating session:", error);
-        return;
-      }
-    }
-
-    if (activeSessionId) {
-      try {
-        await postMessage(activeSessionId, message);
-
-        setMessage("");
-
-        await fetchMessages(activeSessionId, csrfToken);
-
-        await fetchSessions();
-
-        await apiClient.get(
-          `/api/chat/sessions/${activeSessionId}/`, {
-          headers: { 'X-CSRFToken': csrfToken }
-        });
-      } catch (error) {
-        console.error("Failed to send message:", error);
-      }
-    }
-  };
-
   const canStartNewChat =
     !isNewUnsavedChat &&
     selectedSessionId !== null &&
     (sessionMessages[selectedSessionId]?.length ?? 0) > 0;
 
-  const loadSessionById = async (sessionId: string, slug: string) => {
-    const csrfToken = getCookie('csrftoken');
-    navigate(`/chat/${slug}`);
-
-    setTimeout(async () => {
-      console.log('358');
-      setSelectedSessionId(sessionId);
-      setIsNewUnsavedChat(false);
-
-      if (csrfToken) {
-        await fetchMessages(sessionId, csrfToken);
-      }
-    }, 10);
-  };
+  console.log('297 selectedSessionId:', selectedSessionId);
 
   const messages = selectedSessionId
     ? sessionMessages[selectedSessionId] || []
@@ -381,16 +281,8 @@ const Chat: React.FC = () => {
       ? []
       : [];
 
-  const handleSocketMessage = (updatedMessages: Record<string, Message[]>) => {
-    setSessionMessages(updatedMessages);
-  };
-
   return (
     <div className="wrapper">
-      <NotificationSocket
-        sessionId={selectedSessionId}
-        onMessage={handleSocketMessage} />
-
       <div className="chat-layout"
         style={{ display: 'flex', width: '80%' }}>
 
@@ -409,6 +301,7 @@ const Chat: React.FC = () => {
               const tempId = `temp-${Date.now()}`;
 
               setSelectedSessionId(tempId);
+
               setIsNewUnsavedChat(true);
 
               setMessage("");
@@ -420,7 +313,7 @@ const Chat: React.FC = () => {
 
               setSessionSlug("");
 
-              navigate('/chat');
+              navigate('/chat-page');
             }}
           />
 
@@ -439,8 +332,8 @@ const Chat: React.FC = () => {
               onMouseEnter={() => setHoveredSessionId(session.session_id)}
               onMouseLeave={() => {
                 if (!menuOpenSessionId && !renamingViaMenuSessionId) {
-                  /* Remove hovered session only if
-                     the menu is not open. */
+                  /* Remove hovered session only
+                     if the menu is not open. */
                   setHoveredSessionId(null);
                 }
               }}
@@ -743,19 +636,16 @@ const Chat: React.FC = () => {
             </div>
           </div>
 
-          <input
-            type="text"
-            placeholder="Type a message..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={sendMessage}
-            style={{
-              padding: '0.5rem',
-              fontSize: '1rem',
-              border: '1px solid #ccc',
-              borderRadius: '4px'
-            }}
-          />
+          <InputField sessions={sessions}
+            setSessions={setSessions}
+            selectedSessionId={selectedSessionId}
+            setSelectedSessionId={setSelectedSessionId}
+            isNewUnsavedChat={isNewUnsavedChat}
+            setIsNewUnsavedChat={setIsNewUnsavedChat}
+            sessionMessages={sessionMessages}
+            setSessionMessages={setSessionMessages}
+            fetchMessages={fetchMessages}
+            loadSessionById={loadSessionById} />
         </div>
       </div>
 

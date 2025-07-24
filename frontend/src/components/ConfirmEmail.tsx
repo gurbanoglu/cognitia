@@ -96,7 +96,7 @@ const ConfirmEmail: React.FC = () => {
 
         <div className="mt-6">
           <a
-            href="/api/chat/sessions/"
+            href="/api/chat-page/sessions/"
             className={`
               px-4 py-2 bg-indigo-600
               text-white rounded
