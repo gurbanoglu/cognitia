@@ -53,7 +53,7 @@ const SignUp: React.FC = () => {
 
         dispatch(loginSuccess({ user: emailAddress, csrfToken: csrfToken }));
 
-        navigate('/chat');
+        navigate('/chat-page');
       }
 
       setStatus('success');

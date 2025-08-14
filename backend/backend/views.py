@@ -25,6 +25,29 @@ from django.views.decorators.cache import never_cache
 
 logger = logging.getLogger(__name__)
 
+'''
+Not dangerous because it only handles GET requests.
+
+This view does not validate or require a CSRF token.
+Instead, it ensures that Django sets a CSRF token in
+the response cookie if one doesn't already exist.
+
+Adds a Set-Cookie header to the response:
+Set-Cookie: csrftoken=<token_value>; Path=/; SameSite=Lax
+
+The decorator modifies the response to include the
+CSRF cookie.
+'''
+# @ensure_csrf_cookie
+# def get_csrf_token(request):
+#   return JsonResponse({'detail': 'CSRF cookie set'})
+
+@api_view(['GET'])
+def is_authenticated(request):
+	if request.user.is_authenticated:
+		return JsonResponse({'authenticated': True, 'email': request.user.email_address})
+	return JsonResponse({'authenticated': False})
+
 def create_activation_token_obj(user, activation_token):
 	# Create the ActivationToken object.
 	ActivationToken.objects.create(

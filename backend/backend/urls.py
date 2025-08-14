@@ -21,7 +21,8 @@ from backend.views import (
 	send_verification_code,
   verify_token,
   check_if_active,
-  login_with_email
+  login_with_email,
+  is_authenticated
 )
 
 from core.views import (
@@ -37,7 +38,8 @@ from .views import get_csrf_token
 
 urlpatterns = [
   path('admin/', admin.site.urls),
-	path('api/chat-page/sessions/', create_chat_session),
+	# path('api/chat-page/sessions/', create_chat_session),
+  path('api/create-chat-session/', create_chat_session),
 	path('api/chat-page/sessions/<str:session_id>/', chat_session),
 	path('send-verification-code/', send_verification_code),
 	path('verify-token/', verify_token),
@@ -46,6 +48,7 @@ urlpatterns = [
   path('api/get-csrf-token/', get_csrf_token),
   path('chat-page/<slug:slug>/', chat_session_detail),
   path('save-chat-session/', save_chat_session),
-  path('get-all-sessions/', get_all_sessions),
-  path('api/chat-page/update/<str:session_id>/<int:message_index>/', update_user_message)
+  path('api/get-all-sessions/', get_all_sessions),
+  path('api/chat-page/update/<str:session_id>/<int:message_index>/', update_user_message),
+  path('auth-status/', is_authenticated, name='auth-status')
 ]

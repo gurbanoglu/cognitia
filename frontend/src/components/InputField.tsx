@@ -24,6 +24,9 @@ interface InputFieldProps {
   sessionMessages: Record<string, Message[]>;
   setSessionMessages: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
 
+  sessionSlug: string;
+  setSessionSlug: React.Dispatch<React.SetStateAction<string>>;
+
   fetchMessages: (sessionId: string, csrfToken: string) => Promise<void>;
 
   loadSessionById: (sessionId: string, slug: string) => Promise<void>;
@@ -34,17 +37,40 @@ const InputField: React.FC<InputFieldProps> = ({
   selectedSessionId, setSelectedSessionId,
   isNewUnsavedChat, setIsNewUnsavedChat,
   sessionMessages, setSessionMessages,
+  sessionSlug, setSessionSlug,
   fetchMessages, loadSessionById
 }) => {
   const [socket, setSocket] = useState<WebSocket | null>(null);
   // const [message, setMessage] = useState<string>("");
   const [messages, setMessages] = useState<string[]>([]);
   const [input, setInput] = useState<string>('');
-  const [sessionSlug, setSessionSlug] = useState<string>('');
 
   const navigate = useNavigate();
 
+  // This will pause the browser dev tools debugger if open
+  // useEffect(() => {
+  //   debugger;
+  // }, []);
+
   useEffect(() => {
+    const csrfToken = getCookie('csrftoken');
+    if (!csrfToken) return;
+
+    // Wait until the response from the web socket is sent.
+    fetchSessions();
+
+    if(selectedSessionId) {
+      apiClient.get(
+        `/api/chat-page/sessions/${selectedSessionId}/`, {
+        headers: { 'X-CSRFToken': csrfToken }
+      });
+
+      fetchMessages(selectedSessionId, csrfToken);
+    }
+  }, [messages]);
+
+  useEffect(() => {
+    console.log('InputField.tsx useEffect line 73');
     // Creates a new WebSocket connection to the
     // backend server at the given address.
     const ws = new WebSocket('ws://localhost:8000/ws/simple/');
@@ -58,10 +84,13 @@ const InputField: React.FC<InputFieldProps> = ({
     ws.onmessage = (event: MessageEvent) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('InputField.tsx data.messages 87:', data.messages);
 
-        if (typeof data.message === 'string') {
-          setMessages(prev => [...prev, data.message]);
-        }
+        // Preserve the existing messages while appending
+        // data.messages to the end of the list.
+        setMessages(
+          prev => [...prev, data.messages]
+        );
       } catch (error) {
         console.error('Failed to parse message', error);
       }
@@ -102,27 +131,32 @@ const InputField: React.FC<InputFieldProps> = ({
 
   const fetchSessions = async () => {
     const csrfToken = getCookie('csrftoken');
-
-    if (!isAuthenticated || !csrfToken) return;
-
+    console.log('InputField.tsx ' + '!isAuthenticated 134: ' + !isAuthenticated);
+    // if (!isAuthenticated || !csrfToken) return;
+    if (!csrfToken) return;
+    console.log('InputField.tsx 137');
     try {
-      console.log('request sent to /api/chat-page/sessions/');
+      console.log('InputField.tsx 139');
 
       const response = await apiClient.get(
-        "/api/chat-page/sessions/",
+        `/api/get-all-sessions/`,
         {
           headers: { "X-CSRFToken": csrfToken }
         }
       );
 
+      console.log('InputField.tsx 148 response:', response);
+
       setSessions(prev => {
-        console.log('prev:', prev);
+        console.log('InputField.tsx 151 prev:', prev);
 
         const tempSessions = prev.filter(s => s.session_id.startsWith("temp-"));
 
-        console.log('response.data:', response.data);
-
-        return [response.data.messages || [], ...tempSessions];
+        console.log('InputField.tsx 155 response.data:', response.data);
+        console.log('InputField.tsx 156 response.data.sessions:', response.data.sessions);
+        console.log('InputField.tsx 157 ...tempSessions:', ...tempSessions);
+        // return [response.data.sessions || [], ...tempSessions];
+        return [...(response.data.sessions || []), ...tempSessions];
       });
     } catch (error) {
       console.error("Failed to fetch sessions:", error);
@@ -147,14 +181,14 @@ const InputField: React.FC<InputFieldProps> = ({
     }
 
     let activeSessionId = selectedSessionId;
-    console.log('isNewUnsavedChat:', isNewUnsavedChat);
+    console.log('InputField.tsx 184 isNewUnsavedChat:', isNewUnsavedChat);
     // If in new a unsaved chat mode, create a
     // backend session now.
     if (isNewUnsavedChat) {
-      console.log('167');
+      console.log('InputField.tsx 188');
       try {
         const response = await apiClient.post(
-          '/save-chat-session/',
+          `/save-chat-session/`,
           {input},
           { headers: { 'X-CSRFToken': csrfToken } }
         );
@@ -169,8 +203,15 @@ const InputField: React.FC<InputFieldProps> = ({
 
         // Add chat session to sidebar immediately.
         setSessions(prev => {
+          console.log('InputField.tsx 206 ...prev:', ...prev);
+          console.log({
+            session_id: response.data.session_id,
+            slug: response.data.slug,
+            title: response.data.title
+          });
+
           return [
-          ...prev,
+            ...prev,
             {
               session_id: response.data.session_id,
               slug: response.data.slug,
@@ -179,9 +220,7 @@ const InputField: React.FC<InputFieldProps> = ({
           ];
         });
 
-        console.log('InputField.tsx sendMessage');
-
-        console.log('response.data.session_id:', response.data.session_id);
+        console.log('InputField.tsx 223 response.data.session_id:', response.data.session_id);
 
         setSelectedSessionId(response.data.session_id);
 
@@ -193,9 +232,8 @@ const InputField: React.FC<InputFieldProps> = ({
         return;
       }
     }
-    console.log('209');
+    console.log('235');
     if (activeSessionId) {
-      console.log('211');
       try {
         // postMessage(activeSessionId, input);
 
@@ -212,15 +250,8 @@ const InputField: React.FC<InputFieldProps> = ({
         }
 
         // setInput("");
-
-        await fetchMessages(activeSessionId, csrfToken);
-
-        await fetchSessions();
-
-        await apiClient.get(
-          `/api/chat-page/sessions/${activeSessionId}/`, {
-          headers: { 'X-CSRFToken': csrfToken }
-        });
+        console.log('InputField.tsx 253 activeSessionId:', activeSessionId);
+        // await fetchMessages(activeSessionId, csrfToken);
       } catch (error) {
         console.error("Failed to send message:", error);
       }

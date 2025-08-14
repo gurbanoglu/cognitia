@@ -1,0 +1,15 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Chrome: Debug React",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+
+      // ${workspaceFolder} refers to the root of
+      // your project — i.e., the cognitia folder.
+      "webRoot": "${workspaceFolder}/frontend/src"
+    }
+  ]
+}

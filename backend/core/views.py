@@ -7,30 +7,47 @@ from core.serializers import AiChatSessionSerializer
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from django.utils.text import slugify
-from .models import AiChatSession, CustomUser
+from .models import AiChatSession, CustomUser, ChatMessage
 from rest_framework.exceptions import NotFound
 from celery import shared_task
-import uuid
 from rest_framework.views import APIView
 from django.core.cache import cache
+from rest_framework import generics
+from core.serializers import ChatMessageSerializer
+import uuid
 import time
 
-@api_view(['GET', 'POST'])
+
+class ListSessionMessagesView(generics.ListAPIView):
+  serializer_class = ChatMessageSerializer
+
+  def get_queryset(self):
+    session_id = self.kwargs["session_id"]
+
+    # TODO: ensure user owns the session
+
+    return ChatMessage.objects.filter(session_id=session_id).order_by("created_at")
+
+# @api_view(['GET', 'POST'])
+@api_view(['POST'])
 def create_chat_session(request):
   """Create a new chat session."""
+  # if request.user:
+  #   user = request.user
 
-  if request.user:
-    user = request.user
+  #   session = AiChatSession.objects.create(user=user)
 
-    session = AiChatSession.objects.create(user=user)
+  #   print('backend/core/views.py: create_chat_session invoked')
+  # else:
+  #   # If an end user isn't signed in.
+  #   session = AiChatSession.objects.create()
 
-    print('views.py: create_chat_session invoked')
-  else:
-    # If an end user isn't signed in.
-    session = AiChatSession.objects.create()
+  user = request.user if request.user.is_authenticated else None
+
+  session = AiChatSession.objects.create(user=user)
 
   serializer = AiChatSessionSerializer(session)
-
+  print('backend/core/views.py 37 create_chat_session()')
   return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
@@ -41,7 +58,7 @@ def chat_session_detail(request, slug):
   )
 
   messages = session.get_all_messages()
-
+  print('backend/core/views.py 48 messages:', messages)
   return Response({
     'id': session.session_id,
     'slug': session.slug,
@@ -68,13 +85,15 @@ def save_chat_session(request):
   # in a chat session.
   message = request.data.get('input')
 
-  print('backend/core/views.py save_chat_session message:', message)
+  print('backend/core/views.py save_chat_session() message:', message)
 
-  # The title of a chat session can be fifty
-  # characters at most.
+  # The title of a chat session can
+  # be fifty characters at most.
   title = message[:50]
 
   session_id = uuid.uuid4()
+
+  print('backend/core/views.py save_chat_session() session_id:', session_id)
 
   base_slug = slugify(title) or "chat"
 
@@ -90,7 +109,7 @@ def save_chat_session(request):
 
     AiChatSessionSerializer(session)
 
-    print('AiChatSession was serialised.')
+    # print('AiChatSessionSerializer(session):', AiChatSessionSerializer(session))
 
   return Response({
     'session_id': session_id,
@@ -104,32 +123,41 @@ def save_chat_session(request):
 def get_all_sessions(request):
   # AiChatSession.objects.all().delete()
 
-  # print('all sessions after delete:', list(AiChatSession.objects.all()))
+  # print('backend/core/views.py 113 list(AiChatSession.objects.all()):',
+  #       list(AiChatSession.objects.all()))
 
   sessions = AiChatSession.objects.filter(user=request.user)
+  # print('backend/core/views.py 117 list(sessions):', list(sessions))
   serializer = AiChatSessionSerializer(sessions, many=True)
 
-  # print('user:', request.user)
-  # print('user sessions after delete:', list(sessions))
+  print('backend/core/views.py 120 serializer.data:', serializer.data)
 
-  return Response({
-    "sessions": serializer.data
-  })
+  return Response({"sessions": serializer.data}, status=status.HTTP_200_OK)
 
 @api_view(['GET', 'POST', 'PUT', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def chat_session(request, session_id):
   try:
+    # print('backend/core/views.py chat_session() session_id:', session_id)
     session = AiChatSession.objects.get(
       session_id=session_id, user=request.user
     )
+    # print('backend/core/views.py 132 session:', session)
+    # sessions = AiChatSession.objects.filter(user=request.user)
   except AiChatSession.DoesNotExist:
     raise NotFound("Chat session not found.")
 
   if request.method == 'GET':
     serializer = AiChatSessionSerializer(session)
+    print('backend/core/views.py 139 serializer.data:', serializer.data)
+
+    # The .data property triggers to_representation() in
+    # the AiChatSessionSerializer model class under the
+    # hood.
     return Response(serializer.data)
   elif request.method == 'POST':
+    # No longer in use because messages are being
+    # sent to the backend with a web socket.
     message = request.data.get('message')
 
     if not message:
@@ -140,7 +168,11 @@ def chat_session(request, session_id):
 
     session.send(message)
 
+    session = AiChatSession.objects.get(session_id=session.session_id)
+    print("backend/core/views.py 159 session.messages():", session.messages())
+
     serializer = AiChatSessionSerializer(session)
+    print('backend/core/views.py 162 serializer:', serializer)
     return Response(serializer.data)
   elif request.method == 'PUT':
     title = request.data.get('title')
@@ -178,9 +210,12 @@ def async_edit_user_message(session_id, user_id, message_index, updated_message)
   user = CustomUser.objects.get(pk=user_id)
   session = AiChatSession.objects.get(session_id=session_id, user=user)
   result = session.edit_user_message(message_index, updated_message)
+  serializer = AiChatSessionSerializer(session)
+  print('backend/core/views.py 203 serializer.data:', serializer.data)
 
   # Store result in cache or DB for polling (example using Django cache)
   cache.set(f"edit_result_{async_edit_user_message.request.id}", result, timeout=3600)
+
   return result
 
 @api_view(["PATCH"])
@@ -194,7 +229,7 @@ def update_user_message(request, session_id: str, message_index: int):
   try:
     start = time.time()
     # new_request = session.edit_user_message(message_index, updated_message)
-    print('update_user_message invoked')
+    print('backend/core/views.py 221 updated_message:', updated_message)
 
     # Queue the Celery task in the API. Include a unique
     # task/session ID if you want to track it.

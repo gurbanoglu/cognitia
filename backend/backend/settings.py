@@ -124,6 +124,9 @@ CORS_ALLOWED_ORIGINS = [
 # to requests that include credentials.
 CORS_ALLOW_CREDENTIALS = True
 
+# Session backend (default)
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+
 CSRF_TRUSTED_ORIGINS = [
   'http://localhost:5173',
   'http://172.20.0.4:5173'

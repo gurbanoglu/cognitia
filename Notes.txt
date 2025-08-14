@@ -285,3 +285,10 @@ Authentication to the page, so
 that not anyone can access it
 and make an abundant amount of
 requests on your API key.
+
+State management:
+Context API
+
+Responsive design
+
+Performance optimisation

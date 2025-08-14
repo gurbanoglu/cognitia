@@ -30,7 +30,7 @@ export const updateChatSession = async (
     );
 
     console.log(`Session ${selectedSessionId} updated successfully.`);
-
+    console.log('frontend/src/api updateChatSession.ts response:', response);
     return response;
   } catch (error) {
     console.error("Error updating session:", error);

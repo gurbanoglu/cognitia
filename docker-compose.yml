@@ -24,6 +24,10 @@ services:
       - 5173:5173
     volumes:
       - ./frontend:/frontend
+      - /frontend/node_modules
+    # Uncomment when running a debugger and setting
+    # a breakpoint. 
+    command: npm start
     extra_hosts:
       - "host.docker.internal:host-gateway"
     # networks:

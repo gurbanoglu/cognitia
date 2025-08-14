@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import apiClient from "../api/apiClient";
 import { getCookie } from "../api/getCookie";
-import { RootState } from './../app/store';
-import { useSelector } from "react-redux";
 import NewChatButton from "../components/NewChatButton";
 import { useParams, useNavigate } from "react-router-dom";
 import { deleteChatSession } from "../api/deleteChatSession";
@@ -10,6 +8,9 @@ import { Pencil, Trash2, Check, Copy } from "lucide-react";
 import ConfirmDeleteModal from "./ConfirmDeleteModal";
 import { updateChatSession } from "../api/updateChatSession";
 import InputField from "./InputField";
+import { RootState } from './../app/store';
+import { useSelector } from "react-redux";
+import axios from "axios";
 
 export interface Message {
   role: string;
@@ -29,9 +30,16 @@ interface ChatProps {
   sessionMessages: Record<string, Message[]>;
   setSessionMessages: React.Dispatch<React.SetStateAction<Record<string, Message[]>>>;
 
+  sessionSlug: string;
+  setSessionSlug: React.Dispatch<React.SetStateAction<string>>;
+
   fetchMessages: (sessionId: string, csrfToken: string) => Promise<void>;
 
   loadSessionById: (sessionId: string, slug: string) => Promise<void>;
+
+  isAuthenticated: boolean;
+
+  csrfToken: string | null;
 }
 
 /* Controlled component
@@ -43,17 +51,11 @@ const Chat: React.FC<ChatProps> = ({
   selectedSessionId, setSelectedSessionId,
   isNewUnsavedChat, setIsNewUnsavedChat,
   sessionMessages, setSessionMessages,
-  fetchMessages, loadSessionById
+  sessionSlug, setSessionSlug,
+  fetchMessages, loadSessionById,
+  csrfToken
 }) => {
   const [message, setMessage] = useState<string>("");
-
-  const isAuthenticated = useSelector(
-    (state: RootState) => state.auth.isAuthenticated
-  );
-
-  const csrfToken = useSelector((state: RootState) => state.auth.csrfToken);
-
-  const [sessionSlug, setSessionSlug] = useState<string>('');
 
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string>("");
@@ -78,6 +80,7 @@ const Chat: React.FC<ChatProps> = ({
 
   // Tracks changes to menuOpenSessionId.
   useEffect(() => {
+    console.log('Chat.tsx useEffect line 83')
     if (!mounted.current) {
       mounted.current = true;
       return;
@@ -114,43 +117,14 @@ const Chat: React.FC<ChatProps> = ({
     }
   };
 
-  const { slug } = useParams();
   const navigate = useNavigate();
 
   const menuRef = useRef<HTMLDivElement | null>(null);
 
-  const fetchSessions = async () => {
-    const csrfToken = getCookie('csrftoken');
-
-    if (!isAuthenticated || !csrfToken) return;
-
-    try {
-      console.log('request sent to /api/chat-page/sessions/');
-
-      const response = await apiClient.get(
-        "/api/chat-page/sessions/",
-        {
-          headers: { "X-CSRFToken": csrfToken }
-        }
-      );
-
-      setSessions(prev => {
-        console.log('prev:', prev);
-
-        const tempSessions = prev.filter(s => s.session_id.startsWith("temp-"));
-
-        console.log('response.data:', response.data);
-
-        return [response.data.messages || [], ...tempSessions];
-      });
-    } catch (error) {
-      console.error("Failed to fetch sessions:", error);
-    }
-  };
-
   const fetchAllSessions = async () => {
+    console.log('Chat.tsx 125 request sent to /api/get-all-sessions/');
     const response = await apiClient.get(
-      `/get-all-sessions/`,
+      `/api/get-all-sessions/`,
       {
         headers: {
           'X-CSRFToken': csrfToken
@@ -164,6 +138,7 @@ const Chat: React.FC<ChatProps> = ({
   const updateSessionTitle = async (sessionId: string, newTitle: string) => {
     try {
       const csrfToken = getCookie('csrftoken');
+      console.log('Chat.tsx 141 updateSessionTitle');
       if (!csrfToken) return;
 
       await apiClient.put(
@@ -209,7 +184,7 @@ const Chat: React.FC<ChatProps> = ({
 
           return copy;
         });
-
+        console.log('Chat.tsx 186')
         navigate('/chat-page');
       }
     } catch (error) {
@@ -218,11 +193,12 @@ const Chat: React.FC<ChatProps> = ({
   };
 
   useEffect(() => {
+    console.log('Chat.tsx useEffect line 195')
     const fetchData = async () => {
       try {
         const allSessions = await fetchAllSessions();
 
-        console.log('allSessions:', allSessions);
+        console.log('Chat.tsx 200 allSessions:', allSessions);
 
         // Safeguard sessions, so that it is never
         // undefined, but instead an empty array.
@@ -244,43 +220,47 @@ const Chat: React.FC<ChatProps> = ({
   //   }
   // }, [selectedSessionId, csrfToken]);
 
-  useEffect(() => {
-    fetchSessions();
+  // useEffect(() => {
+  //   fetchSessions();
 
-    if (sessions.length == 0) {
-      console.log('Chat.tsx deleteSession() session.length == 0');
+  //   if (sessions.length == 0) {
+  //     console.log('Chat.tsx deleteSession() session.length == 0');
 
-      setIsNewUnsavedChat(true);
-    }
+  //     setIsNewUnsavedChat(true);
+  //   }
 
-    if (sessionSlug && sessions.length > 0) {
-      const matchedSession = sessions.find(s => s.slug === sessionSlug);
+  //   if (sessionSlug && sessions.length > 0) {
+  //     const matchedSession = sessions.find(s => s.slug === sessionSlug);
 
-      if (matchedSession) {
-        setSelectedSessionId(matchedSession.session_id);
+  //     if (matchedSession) {
+  //       setSelectedSessionId(matchedSession.session_id);
 
-        setIsNewUnsavedChat(false);
+  //       setIsNewUnsavedChat(false);
 
-        if (csrfToken) {
-          fetchMessages(matchedSession.session_id, csrfToken);
-        }
-      }
-    }
-  }, [slug, sessions, csrfToken]);
+  //       if (csrfToken) {
+  //         fetchMessages(matchedSession.session_id, csrfToken);
+  //       }
+  //     }
+  //   }
+  // }, [slug, sessions, csrfToken]);
 
   const canStartNewChat =
     !isNewUnsavedChat &&
     selectedSessionId !== null &&
     (sessionMessages[selectedSessionId]?.length ?? 0) > 0;
 
-  console.log('297 selectedSessionId:', selectedSessionId);
-
+  // console.log('251 selectedSessionId:', selectedSessionId);
+  // console.log('252 sessionMessages[selectedSessionId]:', sessionMessages[selectedSessionId!]);
+  // console.log('Chat.tsx 253 sessionMessages:', sessionMessages);
   const messages = selectedSessionId
     ? sessionMessages[selectedSessionId] || []
     : isNewUnsavedChat
       ? []
       : [];
-
+  console.log('Chat.tsx 260 sessions:', sessions);
+  // console.log('Chat.tsx 260 messages:', messages);
+  // console.log('Chat.tsx 261 sessions:', sessions);
+  console.log('Chat.tsx 263 editingSessionId:', editingSessionId);
   return (
     <div className="wrapper">
       <div className="chat-layout"
@@ -297,28 +277,59 @@ const Chat: React.FC<ChatProps> = ({
         }}>
           <NewChatButton
             disabled={!canStartNewChat}
-            onNewSessionCreated={() => {
+            onNewSessionCreated={async () => {
               const tempId = `temp-${Date.now()}`;
 
+              // Optimistically update UI
               setSelectedSessionId(tempId);
-
               setIsNewUnsavedChat(true);
-
               setMessage("");
-
               setSessionMessages(prev => ({
                 ...prev,
                 [tempId]: []
               }));
-
               setSessionSlug("");
-
               navigate('/chat-page');
+
+              try {
+                // POST to Django to create real AiChatSession
+                // const response = await apiClient.post(
+                //   `api/create-chat-session/`,
+                //   {},
+                //   { withCredentials: true }
+                // );
+
+                // const realSession = response.data;
+
+                // Replace tempId with real session ID
+                // setSelectedSessionId(realSession.session_id);
+                // setSessionSlug(realSession.slug);
+                // console.log('Chat.tsx 305 messages:', messages);
+                // setSessionMessages(prev => {
+                //   const messages = prev[tempId] || [];
+                //   const { [tempId]: _, ...rest } = prev;
+
+                //   return {
+                //     ...rest,
+                //     [realSession.session_id]: messages
+                //   };
+                // });
+
+                // Optionally update session list too
+                // setSessions(prev => [realSession, ...prev]);
+              } catch (error) {
+                console.error("Failed to create new session:", error);
+                // Optionally show error toast
+              }
             }}
           />
 
           {/* Left side panel */}
-          {sessions.length > 0 && sessions.map((session) => (
+          {sessions.length > 0 && sessions.map((session) => {
+            // console.log('Chat.tsx 327 sessions.length:', sessions.length);
+            console.log('Chat.tsx 330 sessions:', sessions);
+            console.log('Chat.tsx 331 session.session_id:', session.session_id);
+            return (
             <div
               key={session.session_id}
               className="session-button-wrapper"
@@ -370,7 +381,11 @@ const Chat: React.FC<ChatProps> = ({
                       onChange={(e) => setEditingTitle(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter') {
-                          updateSessionTitle(session.session_id, editingTitle.trim() || "Untitled Chat");
+                          updateSessionTitle(
+                            session.session_id,
+                            editingTitle.trim() || "Untitled Chat"
+                          );
+
                           setEditingSessionId(null);
                         } else if (e.key === 'Escape') {
                           setEditingSessionId(null);
@@ -398,7 +413,8 @@ const Chat: React.FC<ChatProps> = ({
                     <div style={{
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '1rem' }}>
+                      gap: '1rem' }}
+                    >
                       {/* Green checkmark button */}
                       <button
                         onClick={() => {
@@ -494,7 +510,7 @@ const Chat: React.FC<ChatProps> = ({
                           cursor: "pointer",
                           display: "flex",
                           alignItems: "center",
-                          gap: "0.5rem",
+                          gap: "0.5rem"
                         }}
                       >
                         <Pencil size={16} />
@@ -512,7 +528,7 @@ const Chat: React.FC<ChatProps> = ({
                           display: "flex",
                           alignItems: "center",
                           gap: "0.5rem",
-                          color: "red",
+                          color: "red"
                         }}
                       >
                         <Trash2 size={16} />
@@ -523,7 +539,8 @@ const Chat: React.FC<ChatProps> = ({
                 </div>
               )}
             </div>
-          ))}
+          )}
+          )}
         </div>
 
         <div
@@ -558,11 +575,16 @@ const Chat: React.FC<ChatProps> = ({
 
                     try {
                       const response = await updateChatSession(selectedSessionId, index, editedMessage);
+                      console.log('Chat.tsx 571 response?.data:', response?.data);
+                      console.log('Chat.tsx 572 response?.data.messages:', response?.data.messages);
+                      // setSessionMessages(prev => ({
+                      //   ...prev,
+                      //   [selectedSessionId]: response?.data.messages
+                      // }));
 
-                      setSessionMessages(prev => ({
-                        ...prev,
-                        [selectedSessionId]: response?.data?.messages
-                      }));
+                      // Invoking fetchMessages() is necessary for the UI
+                      // to reflect the updates made to the database.
+                      await fetchMessages(selectedSessionId, csrfToken);
 
                       setEditingMessageIndex(null);
                     } catch (error) {
@@ -571,7 +593,12 @@ const Chat: React.FC<ChatProps> = ({
                   };
 
                   return (
-                    <div key={index} className={`message${isUser ? " user" : ""}`} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div key={index} className={`message${isUser ? " user" : ""}`}
+                      style={{ 
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                    }}>
                       <div style={{ flex: 1 }}>
                         {isUser ? "Me: " : "AI: "}
                         {isUser && isEditing ? (
@@ -644,6 +671,8 @@ const Chat: React.FC<ChatProps> = ({
             setIsNewUnsavedChat={setIsNewUnsavedChat}
             sessionMessages={sessionMessages}
             setSessionMessages={setSessionMessages}
+            sessionSlug={sessionSlug}
+            setSessionSlug={setSessionSlug}
             fetchMessages={fetchMessages}
             loadSessionById={loadSessionById} />
         </div>
